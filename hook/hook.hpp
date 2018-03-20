@@ -4,6 +4,8 @@
 #include <iostream>
 #include <string>
 
+#include <array>
+
 extern "C"
 {
   #include <dlfcn.h>
@@ -14,8 +16,11 @@ extern "C"
   #include <arpa/inet.h>
 }
 
-const std::string dm_ip = "5.196.91.193";
-
+//Extracted from deadmeat.swf
+static std::array<in_addr_t, 3> dm_ips =  {{inet_addr("164.132.202.12"),
+                                            inet_addr("195.154.124.97"),
+                                            inet_addr("5.196.91.193")
+                                          }};
 static unsigned char globalTry = 0;
 
 static struct
@@ -30,6 +35,7 @@ extern "C"
   int connect(int, const struct sockaddr*, socklen_t);
 }
 
+bool isDMGameServer(in_addr_t);
 bool SOCKS4negociation(int, const struct sockaddr*, socklen_t);
 
 #endif //HOOK_HPP

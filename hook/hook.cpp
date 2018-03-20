@@ -5,7 +5,7 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
   if(addr->sa_family == AF_INET && globalTry < 3)
   {
     //Checking if trying to connect to DM server
-    if( ((struct sockaddr_in*)addr)->sin_addr.s_addr == inet_addr( dm_ip.c_str() ) )
+    if( isDMGameServer(((struct sockaddr_in*)addr)->sin_addr.s_addr) )
     {
       std::cout << "[PROXY] Rerouting TCP stream from DM Server to localhost:4444" << std::endl;
       if( SOCKS4negociation(sockfd, addr, addrlen) )
@@ -18,6 +18,14 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
     }
   }
   return (*real_fun.connect)(sockfd, addr, addrlen);
+}
+
+inline bool isDMGameServer( in_addr_t ip )
+{
+  for(auto i : dm_ips )
+    if( i == ip ) return true;
+  
+  return false;
 }
 
 bool SOCKS4negociation(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
