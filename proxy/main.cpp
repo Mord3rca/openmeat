@@ -19,10 +19,11 @@ extern "C"
   #include <poll.h>
 }
 
-unsigned char guard_offset = 0, current_guard = 0;
+bool isGuardSet = false;
+static unsigned char current_guard = 0;
 static std::stack<std::string> inject;
 
-std::atomic<bool> run(true), printOUT(true), printIN(false);
+std::atomic<bool> run(true), printOUT(true), printIN(true);
 
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -91,17 +92,15 @@ inline unsigned char getGuardValue(unsigned char* data)
 
 inline void setGuardValue(unsigned char* data)
 {
-  data[data[0]+1] += guard_offset;
-  data[data[0]+1] -= ( data[data[0]+1] > 0x63 ) ? 0x64 : 0x00;
+  data[data[0]+1] = current_guard++;
+  current_guard -= ( current_guard >= 0x64 ) ? 0x64 : 0x00;
 }
 
 //ONLY CMD.size() < 252 supported.
 inline void sendviaCmdStr(std::string& cmd, int fd)
 {
-  guard_offset++;
   unsigned char data[255]; bzero(&data, 255);
   data[0] = 0x01; data[1] = cmd.length()/2;
-  data[2] = current_guard;
   setGuardValue(data);
   
   for(size_t i=0; i<cmd.length(); i++)
@@ -218,7 +217,6 @@ void proxy_serv( void )
         int pos = recv(fds[0].fd, &buff, sizeof(buff), 0);
         if( pos > 0 )
         {
-          current_guard = getGuardValue(buff);
           setGuardValue(buff);
           
           if( printOUT )
@@ -240,6 +238,12 @@ void proxy_serv( void )
         int pos = recv(fds[1].fd, &buff, sizeof(buff), 0);
         if( pos > 0 )
         {
+          if( !isGuardSet && buff[2] == 0x1a && buff[3] == 0x03 )
+          {
+            current_guard = buff[8];
+            isGuardSet = true;
+          }
+          
           if(printIN)
           {
             std::cout << "[IN] - ";
