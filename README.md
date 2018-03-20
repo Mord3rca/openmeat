@@ -1,11 +1,15 @@
 # DeadMeat Cheat Engine
-Working on it .... Lots of messages te decode.
+A TCP Hook to inject and visualise packets received/sent by Dead Maze
 
-This is currently in Indev state ... So, it's unstable.
+## How to use it ?
 
-If you want to use it, just LD_PRELOAD the hook and start the py_proxy. You should see all messages received/sent by the app.
+You have to preload the hook with the following command steam launch option:
+```
+LD_PRELOAD=/path/to/hook.so %command%
+```
 
+Once done, start the proxy and start the game.
 
-# WTF is that ?
-Nothing .. Just a hook to trick the app and pass the TCP Stream in a SOCKS4 proxy to corrupt/see Client & Server transaction.
+## Current goal
+Actually, I'm focusing on decoding packets opcode. Once it's done, I'll search for some vulnerability in the communication protocol.
 
