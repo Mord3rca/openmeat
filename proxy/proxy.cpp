@@ -28,9 +28,9 @@ Proxy::~Proxy()
   _run.store(false);
   _loop->join();
   
-  close(_proxyfd);
-  close(_clientfd);
-  close(_serverfd);
+  if(_proxyfd)  close(_proxyfd);
+  if(_clientfd) close(_clientfd);
+  if(_serverfd) close(_serverfd);
 }
 
 bool Proxy::operator ()()
@@ -181,9 +181,12 @@ void Proxy::_proxy_loop()
       }
     }
   }
+  
+  close(_clientfd); _clientfd = 0;
+  close(_serverfd); _serverfd = 0;
 }
 
-void Proxy::setCallback(void (*func)(const unsigned char*, size_t), enum CALLBACK_TYPES calltype)
+void Proxy::setCallback(void (*func)(unsigned char*, size_t), enum CALLBACK_TYPES calltype)
 {
   _callbacks[calltype] = func;
 }

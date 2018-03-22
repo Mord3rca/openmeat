@@ -66,40 +66,48 @@ void prettyprint(std::ostream& out, const unsigned char* data, size_t datalen, b
   out << ANSI_COLOR_RESET << std::endl;
 }
 
-void on_sent(const unsigned char* data, size_t len)
-{
-  std::cout << "[OUT] - ";
-  prettyprint(std::cout, data, len, true);
-}
-
-void on_received(const unsigned char* data, size_t len)
-{
-  std::cout << "[IN] - ";
-  prettyprint(std::cout, data, len);
-}
-
-void on_error(const unsigned char* errmsg, size_t errlen)
-{
-  std::cerr << errmsg << std::endl;
-}
-
-inline unsigned char getGuardValue(unsigned char* data)
-{
-  return data[data[0] + 1];
-}
-
 inline void setGuardValue(unsigned char* data)
 {
   data[data[0]+1] = current_guard++;
   current_guard -= ( current_guard >= 0x64 ) ? 0x64 : 0x00;
 }
 
+void on_sent(unsigned char* data, size_t len)
+{
+  setGuardValue(data);
+  std::cout << "[OUT] - ";
+  prettyprint(std::cout, data, len, true);
+}
+
+void on_received(unsigned char* data, size_t len)
+{
+  if(!isGuardSet && data[2] == 0x1a && data[3] == 0x03)
+  {
+    current_guard = data[8]; isGuardSet = true;
+  }
+  std::cout << "[IN] - ";
+  prettyprint(std::cout, data, len);
+}
+
+void on_error(unsigned char* errmsg, size_t errlen)
+{
+  std::cerr << errmsg << std::endl;
+}
+
+void on_inject(unsigned char* data, size_t len)
+{
+  setGuardValue(data);
+  std::cout << "[INJECTED][OUT] - "; prettyprint(std::cout, data, len, true);
+}
+
+
 int main( int argc, char *argv[] )
 {
   Proxy proxy("127.0.0.1", 4444);
     proxy.setCallback(on_sent, Proxy::CALLBACK_TYPES::ON_SENT);
-    proxy.setCallback(on_received, Proxy::CALLBACK_TYPES::ON_RECEIVED);
     proxy.setCallback(on_error, Proxy::CALLBACK_TYPES::ON_ERROR);
+    proxy.setCallback(on_inject, Proxy::CALLBACK_TYPES::ON_INJECT);
+    proxy.setCallback(on_received, Proxy::CALLBACK_TYPES::ON_RECEIVED);
   
   while(proxy())
   {
@@ -112,9 +120,9 @@ int main( int argc, char *argv[] )
       if( cmd.find("print") != std::string::npos )
       {
         if(cmd.find("IN") != std::string::npos)
-          std::cout << "Toggle IN Print";
+          std::cout << "Toggle IN Print" << std::endl;
         else if ( cmd.find("OUT") != std::string::npos )
-          std::cout << "Toogle OUT Print";
+          std::cout << "Toogle OUT Print" << std::endl;
         else
           std::cout << "print command require an argument (IN | OUT)" << std::endl;
       }

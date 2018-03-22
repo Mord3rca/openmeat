@@ -36,9 +36,9 @@ public:
     ON_INJECT = 2, // Packet has been injected in the TCP Stream
     ON_ERROR = 3
   };
-  void setCallback(void (*)(const unsigned char*, size_t), enum CALLBACK_TYPES);
+  void setCallback(void (*)(unsigned char*, size_t), enum CALLBACK_TYPES);
   
-  void inject( const char*, size_t );
+  void inject( const unsigned char*, size_t );
   void inject( const std::string );
   
   ~Proxy();
@@ -55,7 +55,7 @@ private:
   
   int _proxyfd, _clientfd, _serverfd;
   
-  std::array< std::function<void(const unsigned char*, size_t)>, 4> _callbacks;
+  std::array< std::function<void(unsigned char*, size_t)>, 4> _callbacks;
 };
 
 #endif //PROXY_HPP
