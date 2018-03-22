@@ -15,7 +15,7 @@ static unsigned char current_guard = 0;
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
-void prettyprint(std::ostream& out, unsigned char* data, size_t datalen, bool pack_out = false)
+void prettyprint(std::ostream& out, const unsigned char* data, size_t datalen, bool pack_out = false)
 {
   enum delimiters_pos
   {
@@ -66,6 +66,23 @@ void prettyprint(std::ostream& out, unsigned char* data, size_t datalen, bool pa
   out << ANSI_COLOR_RESET << std::endl;
 }
 
+void on_sent(const unsigned char* data, size_t len)
+{
+  std::cout << "[OUT] - ";
+  prettyprint(std::cout, data, len, true);
+}
+
+void on_received(const unsigned char* data, size_t len)
+{
+  std::cout << "[IN] - ";
+  prettyprint(std::cout, data, len);
+}
+
+void on_error(const unsigned char* errmsg, size_t errlen)
+{
+  std::cerr << errmsg << std::endl;
+}
+
 inline unsigned char getGuardValue(unsigned char* data)
 {
   return data[data[0] + 1];
@@ -79,8 +96,10 @@ inline void setGuardValue(unsigned char* data)
 
 int main( int argc, char *argv[] )
 {
-  std::cout << "Proxy Load" << std::endl;
   Proxy proxy("127.0.0.1", 4444);
+    proxy.setCallback(on_sent, Proxy::CALLBACK_TYPES::ON_SENT);
+    proxy.setCallback(on_received, Proxy::CALLBACK_TYPES::ON_RECEIVED);
+    proxy.setCallback(on_error, Proxy::CALLBACK_TYPES::ON_ERROR);
   
   while(proxy())
   {
