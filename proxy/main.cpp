@@ -100,16 +100,22 @@ void on_inject(unsigned char* data, size_t len)
   std::cout << "[INJECTED][OUT] - "; prettyprint(std::cout, data, len, true);
 }
 
+Proxy* createProxy( void )
+{
+  Proxy* proxy = new Proxy("127.0.0.1", 4444);
+    proxy->setCallback(on_sent, Proxy::CALLBACK_TYPES::ON_SENT);
+    proxy->setCallback(on_error, Proxy::CALLBACK_TYPES::ON_ERROR);
+    proxy->setCallback(on_inject, Proxy::CALLBACK_TYPES::ON_INJECT);
+    proxy->setCallback(on_received, Proxy::CALLBACK_TYPES::ON_RECEIVED);
+  
+  return proxy;
+}
 
 int main( int argc, char *argv[] )
 {
-  Proxy proxy("127.0.0.1", 4444);
-    proxy.setCallback(on_sent, Proxy::CALLBACK_TYPES::ON_SENT);
-    proxy.setCallback(on_error, Proxy::CALLBACK_TYPES::ON_ERROR);
-    proxy.setCallback(on_inject, Proxy::CALLBACK_TYPES::ON_INJECT);
-    proxy.setCallback(on_received, Proxy::CALLBACK_TYPES::ON_RECEIVED);
+  Proxy* proxy = createProxy();
   
-  while(proxy())
+  while(true)
   {
     std::string cmd;
     std::cout << "--> "; std::getline(std::cin, cmd);
@@ -126,9 +132,19 @@ int main( int argc, char *argv[] )
         else
           std::cout << "print command require an argument (IN | OUT)" << std::endl;
       }
-      else proxy.inject(cmd);
+      else if(cmd.find("status")!=std::string::npos)
+        std::cout << "Proxy: " << ( ((*proxy)()) ? "Running" : "Stopped" ) << std::endl;
+      else if(cmd.find("restart")!=std::string::npos)
+      {
+        delete proxy;
+        proxy = createProxy();
+        std::cout << "Proxy restarted" << std::endl;
+      }
+      else proxy->inject(cmd);
     }
   }
+  
+  if(proxy) delete proxy;
   
   return 0;
 }
