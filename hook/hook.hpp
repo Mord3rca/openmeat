@@ -17,7 +17,7 @@ extern "C"
 }
 
 //Extracted from deadmeat.swf
-static std::array<in_addr_t, 3> dm_ips =  {{
+static std::array<in_addr_t, 4> dm_ips =  {{
                                             inet_addr("188.165.233.157"),
                                             inet_addr("164.132.202.12"),
                                             inet_addr("195.154.124.97"),
