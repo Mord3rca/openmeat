@@ -3,7 +3,7 @@
 Proxy::Proxy() :  _loop(nullptr), _run(true),
                   _proxyfd(0), _clientfd(0), _serverfd(0)
 {
-  _callbacks = {{nullptr, nullptr, nullptr, nullptr}};
+  _callbacks = {{nullptr, nullptr, nullptr, nullptr, nullptr}};
 }
 
 Proxy::Proxy( const std::string ip, int port ) :  _loop(nullptr), _run(true),
@@ -181,6 +181,8 @@ void Proxy::_proxy_loop()
       }
     }
   }
+  
+  if(_callbacks[ Proxy::CALLBACK_TYPES::ON_STOP ]) _callbacks[ Proxy::CALLBACK_TYPES::ON_STOP ](nullptr, 0);
   
   close(_clientfd); _clientfd = 0;
   close(_serverfd); _serverfd = 0;

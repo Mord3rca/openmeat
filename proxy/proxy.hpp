@@ -34,7 +34,8 @@ public:
     ON_SENT = 0, //Packet Sent by Client
     ON_RECEIVED =1, // Packet Received by DM Server
     ON_INJECT = 2, // Packet has been injected in the TCP Stream
-    ON_ERROR = 3
+    ON_STOP = 3,
+    ON_ERROR = 4
   };
   void setCallback(void (*)(unsigned char*, size_t), enum CALLBACK_TYPES);
   
@@ -55,7 +56,7 @@ private:
   
   int _proxyfd, _clientfd, _serverfd;
   
-  std::array< std::function<void(unsigned char*, size_t)>, 4> _callbacks;
+  std::array< std::function<void(unsigned char*, size_t)>, 5> _callbacks;
 };
 
 #endif //PROXY_HPP
