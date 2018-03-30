@@ -44,7 +44,7 @@ void Proxy::start( const struct sockaddr_in addr )
   if( _proxyfd < 0)
   {
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"socket() Error on proxyfd", 0);
-    return;
+    _run.store(false); return;
   }
   
   int turnon = 1;
@@ -54,14 +54,14 @@ void Proxy::start( const struct sockaddr_in addr )
   {
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"bind() Error on proxyfd", 0);
     if(_proxyfd > 0) close(_proxyfd);
-    return;
+    _run.store(false); return;
   }
   
   if(listen(_proxyfd, 1) < 0)
   {
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"listen() Error on proxyfd", 0);
     if(_proxyfd > 0) close(_proxyfd);
-    return;
+    _run.store(false); return;
   }
   
   _loop = new std::thread( &Proxy::_proxy_loop, this );
@@ -79,7 +79,7 @@ void Proxy::_proxy_loop()
   {
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"accept() Error", 0);
     if(_proxyfd > 0) close(_proxyfd);
-    return;
+    _run.store(false); return;
   }
   
   char connect_msg[8];
@@ -89,7 +89,7 @@ void Proxy::_proxy_loop()
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"SOCKS4 Error", 0);
     close(_clientfd);
     if(_proxyfd > 0) close(_proxyfd);
-    return;
+    _run.store(false); return;
   }
   
   _serverfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -98,7 +98,7 @@ void Proxy::_proxy_loop()
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"Server Socket() error", 0);
     close(_serverfd);
     if(_proxyfd > 0) close(_proxyfd);
-    return;
+    _run.store(false); return;
   }
   
   close(_proxyfd); _proxyfd = 0;
@@ -114,7 +114,7 @@ void Proxy::_proxy_loop()
   if( connect(_serverfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
   {
     _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"Server: connect() error", 0);
-    close(_clientfd);
+    close(_clientfd); _run.store(false);
     return;
   }
   
