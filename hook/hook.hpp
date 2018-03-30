@@ -2,8 +2,7 @@
 #define HOOK_HPP
 
 #include <iostream>
-#include <string>
-
+#include <cstring>
 #include <array>
 
 extern "C"
@@ -15,6 +14,8 @@ extern "C"
   #include <sys/socket.h> // SOCKS
   #include <arpa/inet.h>
 }
+
+extern char **environ;
 
 //Extracted from deadmeat.swf
 static std::array<in_addr_t, 4> dm_ips =  {{
@@ -39,5 +40,13 @@ extern "C"
 
 bool isDMGameServer(in_addr_t);
 bool SOCKS4negociation(int, const struct sockaddr*, socklen_t);
+
+/*
+ * Normally, AS3 can't call getenv(), but just in case:
+ * Hide the environment var at library loading.
+ * 
+ * removeFromEnviron should be in init section of the ELF
+ */
+void removeFromEnviron( void ) __attribute__(( constructor ));
 
 #endif //HOOK_HPP

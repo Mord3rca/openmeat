@@ -35,7 +35,8 @@ bool SOCKS4negociation(int sockfd, const struct sockaddr *addr, socklen_t addrle
     newaddr.sin_port            = htons(4444);
     newaddr.sin_addr.s_addr     = inet_addr("127.0.0.1");
     newaddr.sin_family          = AF_INET;
-  int conn = (*real_fun.connect)(sockfd, (const struct sockaddr*)&newaddr, sizeof( newaddr ) );
+  /*int conn = */(*real_fun.connect)(sockfd, (const struct sockaddr*)&newaddr, sizeof( newaddr ) );
+  
   /*
   if( conn != 0 && errno != EINPROGRESS)
   {
@@ -74,4 +75,17 @@ bool SOCKS4negociation(int sockfd, const struct sockaddr *addr, socklen_t addrle
   */
   
   return true;
+}
+
+void removeFromEnviron()
+{
+  for(size_t i = 0; environ[i] != nullptr; i++)
+    if( strstr(environ[i], "LD_PRELOAD=") )
+    {
+      for( size_t j = i+1; environ[j-1] == nullptr; j++ )
+      {
+        environ[j-1] = environ[j];
+      }
+      break;
+    }
 }
