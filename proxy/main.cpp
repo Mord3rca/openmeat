@@ -77,13 +77,28 @@ inline void setGuardValue(unsigned char* data)
   current_guard -= ( current_guard >= 0x64 ) ? 0x64 : 0x00;
 }
 
+inline size_t decodelen(unsigned char* packet)
+{
+  size_t result = 0;
+  for(size_t i = packet[0]; i > 0; i--)
+    result |= packet[i] << (packet[0] - i) * 8;
+    
+  return result;
+}
+
 void on_sent(unsigned char* data, size_t len)
 {
-  setGuardValue(data);
-  if( print_out )
-  { 
-    std::cout << "[OUT] - ";
-    prettyprint(std::cout, data, len, true);
+  //Some packets can be in groups.
+  for( size_t i = 0; i < len; )
+  {
+    size_t pack_len = decodelen( data+i );
+    setGuardValue(data + i);
+    if( print_out )
+    { 
+      std::cout << "[OUT] - ";
+      prettyprint(std::cout, data+i, pack_len+data[i]+2, true);
+    }
+    i += pack_len + 2 + data[i];
   }
 }
 
