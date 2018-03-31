@@ -1,10 +1,15 @@
 #include <iostream>
 #include <iomanip>
 
+#include <atomic>
+
+#include "opcodes.hpp"
 #include "proxy.hpp"
 
 bool isGuardSet = false;
 static unsigned char current_guard = 0;
+
+std::atomic<bool> print_in(true), print_out(true);
 
 //https://stackoverflow.com/questions/3219393/stdlib-and-colored-output-in-c
 #define ANSI_COLOR_RED     "\x1b[31m"
@@ -75,8 +80,11 @@ inline void setGuardValue(unsigned char* data)
 void on_sent(unsigned char* data, size_t len)
 {
   setGuardValue(data);
-  std::cout << "[OUT] - ";
-  prettyprint(std::cout, data, len, true);
+  if( print_out )
+  { 
+    std::cout << "[OUT] - ";
+    prettyprint(std::cout, data, len, true);
+  }
 }
 
 void on_received(unsigned char* data, size_t len)
@@ -85,8 +93,12 @@ void on_received(unsigned char* data, size_t len)
   {
     current_guard = data[8]; isGuardSet = true;
   }
-  std::cout << "[IN] - ";
-  prettyprint(std::cout, data, len);
+  
+  if( print_in )
+  {
+    std::cout << "[IN] - ";
+    prettyprint(std::cout, data, len);
+  }
 }
 
 void on_error(unsigned char* errmsg, size_t errlen)
@@ -114,7 +126,6 @@ Proxy* createProxy( void )
 int main( int argc, char *argv[] )
 {
   Proxy* proxy = createProxy();
-  
   while(true)
   {
     std::string cmd;
@@ -126,9 +137,15 @@ int main( int argc, char *argv[] )
       if( cmd.find("print") != std::string::npos )
       {
         if(cmd.find("IN") != std::string::npos)
+        {
           std::cout << "Toggle IN Print" << std::endl;
+          print_in.store( !print_in );
+        }
         else if ( cmd.find("OUT") != std::string::npos )
+        {
           std::cout << "Toogle OUT Print" << std::endl;
+          print_out.store( !print_out );
+        }
         else
           std::cout << "print command require an argument (IN | OUT)" << std::endl;
       }
@@ -139,8 +156,11 @@ int main( int argc, char *argv[] )
         delete proxy;
         proxy = createProxy();
         std::cout << "Proxy restarted" << std::endl;
+        //Reseting guard byte
+        isGuardSet = false; current_guard = 0;
       }
-      else proxy->inject(cmd);
+      else if( cmd.find("inject") != std::string::npos ) proxy->inject(cmd.substr(7));
+      else std::cout << "Command not recognized" << std::endl;
     }
   }
   
@@ -148,3 +168,17 @@ int main( int argc, char *argv[] )
   
   return 0;
 }
+
+/*
+#include <FL/Fl.H>
+#include "ui/mainwin.hpp"
+
+int main(int argc, char *argv[])
+{
+  Fl::scheme("plastic");
+  ui::mainwin win;
+  win.resizable(win);
+  win.show(argc, argv);
+  return Fl::run();
+}
+*/
