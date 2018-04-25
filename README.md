@@ -1,15 +1,17 @@
-# DeadMeat Cheat Engine
-A TCP Hook to inject and visualise packets received/sent by Dead Maze
+# OpenMeat - A reversing of deadmaze protocol
 
 ## How to use it ?
+
+Start the proxy and right after that, lead the game with the TCP hook
 
 You have to preload the hook with the following command steam launch option:
 ```
 LD_PRELOAD=/path/to/hook.so %command%
 ```
-
-Once done, start the proxy and start the game.
+or, load the hook in your browser:
+```
+LD_PRELOAD=/path/to/hook.so firefox
+```
 
 ## Current goal
-Actually, I'm focusing on decoding packets opcode. Once it's done, I'll search for some vulnerability in the communication protocol.
-
+I'm currently using the proxy to list and decode all messages in order to implement my own server
