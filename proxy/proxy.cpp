@@ -1,13 +1,13 @@
 #include "proxy.hpp"
 
 Proxy::Proxy() :  _loop(nullptr), _run(true),
-                  _proxyfd(0), _clientfd(0), _serverfd(0)
-{
-  _callbacks = {{nullptr, nullptr, nullptr, nullptr, nullptr}};
-}
+                  _proxyfd(0), _clientfd(0), _serverfd(0),
+                  _callbacks( &nullCallbacks )
+{}
 
 Proxy::Proxy( const std::string ip, int port ) :  _loop(nullptr), _run(true),
-                                                  _proxyfd(0), _clientfd(0), _serverfd(0)
+                                                  _proxyfd(0), _clientfd(0), _serverfd(0),
+                                                  _callbacks( &nullCallbacks )
 {
   struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -18,7 +18,8 @@ Proxy::Proxy( const std::string ip, int port ) :  _loop(nullptr), _run(true),
 }
 
 Proxy::Proxy( const struct sockaddr_in addr ) : _loop(nullptr), _run(true),
-                                                _proxyfd(0), _clientfd(0), _serverfd(0)
+                                                _proxyfd(0), _clientfd(0), _serverfd(0),
+                                                _callbacks( &nullCallbacks )
 {
   start(addr);
 }
@@ -26,11 +27,7 @@ Proxy::Proxy( const struct sockaddr_in addr ) : _loop(nullptr), _run(true),
 Proxy::~Proxy()
 {
   _run.store(false);
-  _loop->join();
-  
-  if(_proxyfd)  close(_proxyfd);
-  if(_clientfd) close(_clientfd);
-  if(_serverfd) close(_serverfd);
+  wait();
 }
 
 bool Proxy::operator ()()
@@ -43,8 +40,8 @@ void Proxy::start( const struct sockaddr_in addr )
   _proxyfd = socket(AF_INET, SOCK_STREAM, 0);
   if( _proxyfd < 0)
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"socket() Error on proxyfd", 0);
-    _run.store(false); return;
+    this->callbacks().onError("Socket(): cannot allocate proxyfd");
+    _cleanup(); return;
   }
   
   int turnon = 1;
@@ -52,53 +49,47 @@ void Proxy::start( const struct sockaddr_in addr )
   
   if( bind(_proxyfd, (struct sockaddr*)&addr, sizeof(addr)) < 0)
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"bind() Error on proxyfd", 0);
-    if(_proxyfd > 0) close(_proxyfd);
-    _run.store(false); return;
+    this->callbacks().onError("bind(): Error on proxyfd");
+    _cleanup(); return;
   }
   
   if(listen(_proxyfd, 1) < 0)
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"listen() Error on proxyfd", 0);
-    if(_proxyfd > 0) close(_proxyfd);
-    _run.store(false); return;
+    this->callbacks().onError("listen() Error on proxyfd");
+    _cleanup(); return;
   }
   
   _loop = new std::thread( &Proxy::_proxy_loop, this );
 }
 
-void Proxy::inject( const std::string cmd )
+void Proxy::stop()
 {
-  _inject.push( cmd );
+  _run.store(false);
 }
 
 void Proxy::_proxy_loop()
 {
-  _clientfd = accept(_proxyfd, nullptr, nullptr);
+  struct sockaddr_in client_addr; socklen_t client_addr_size = sizeof(client_addr);
+  _clientfd = accept(_proxyfd, (sockaddr*)&client_addr, &client_addr_size);
   if(_clientfd < 0)
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"accept() Error", 0);
-    if(_proxyfd > 0) close(_proxyfd);
-    _run.store(false); return;
+    this->callbacks().onError("accept() Error");
+    _cleanup(); return;
   }
   
   char connect_msg[8];
   int sckslen = recv(_clientfd, &connect_msg, sizeof(connect_msg), 0);
   if( sckslen < 8)
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"SOCKS4 Error", 0);
-    close(_clientfd);
-    if(_proxyfd > 0) close(_proxyfd);
-    _run.store(false); return;
+    this->callbacks().onError("SOCKS4 Error");
+    _cleanup(); return;
   }
   
   _serverfd = socket(AF_INET, SOCK_STREAM, 0);
   if( _serverfd < 0 )
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"Server Socket() error", 0);
-    close(_serverfd);
-    if(_proxyfd > 0) close(_proxyfd);
-    _run.store(false); return;
+    this->callbacks().onError("Socket(): Server error");
+    _cleanup(); return;
   }
   
   close(_proxyfd); _proxyfd = 0;
@@ -109,14 +100,14 @@ void Proxy::_proxy_loop()
     serv_addr.sin_port = htons(serv_addr.sin_port);
     memcpy(&serv_addr.sin_addr.s_addr, &connect_msg[4], 4);
   
-  //std::cout << "Connecting to: " << inet_ntoa( serv_addr.sin_addr ) << ":" << serv_addr.sin_port << std::endl;
-  
   if( connect(_serverfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0)
   {
-    _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"Server: connect() error", 0);
-    close(_clientfd); _run.store(false);
+    this->callbacks().onError("Server: connect() error");
+    _cleanup();
     return;
   }
+  
+  this->callbacks().onConnect( client_addr, serv_addr );
   
   struct pollfd fds[2];
     fds[0].fd = _clientfd;
@@ -126,14 +117,12 @@ void Proxy::_proxy_loop()
   
   while(_run)
   {
-    //std::cout << "Waiting on Poll..." << std::endl;
     int ret = poll(fds, 2, 200);
     
-    if(ret < 0) break;
-    
-    while(!_inject.empty())
+    if(ret < 0)
     {
-      _sendviaCmdStr(fds[1].fd);
+      this->callbacks().onError("Poll(): Unexpected return");
+      break;
     }
     
     if( ret > 0 )
@@ -145,16 +134,11 @@ void Proxy::_proxy_loop()
         int pos = recv(fds[0].fd, &buff, sizeof(buff), 0);
         if( pos > 0 )
         {
-          if( _callbacks[ Proxy::CALLBACK_TYPES::ON_SENT ] != nullptr )
-            _callbacks[ Proxy::CALLBACK_TYPES::ON_SENT ] (buff, pos);
-          
+          this->callbacks().onSend(buff, pos);
           send(fds[1].fd, &buff, pos, 0);
         }
         else
-        {
-          //std::cout << "End of stream" << std::endl;
-          _run = false; break;
-        }
+          break;
       }
       
       if( fds[1].revents & POLLIN )
@@ -162,51 +146,36 @@ void Proxy::_proxy_loop()
         int pos = recv(fds[1].fd, &buff, sizeof(buff), 0);
         if( pos > 0 )
         {
-          if(_callbacks[ Proxy::CALLBACK_TYPES::ON_RECEIVED ])
-            _callbacks[ Proxy::CALLBACK_TYPES::ON_RECEIVED ](buff, pos);
-          
+          this->callbacks().onReceived(buff, pos);
           send(fds[0].fd, &buff, pos, 0);
         }
         else
-        {
-          //std::cout << "End of stream" << std::endl;
-          _run = false; break;
-        }
+          break;
       }
       
-      if( fds[0].revents & POLLHUP || fds[1].revents & POLLHUP)
-      {
-        _callbacks[Proxy::CALLBACK_TYPES::ON_ERROR]((unsigned char*)"Someone broke the connection", 0);
-        _run = false; break;
-      }
+      if( fds[0].revents & POLLHUP || fds[1].revents & POLLHUP) break;
     }
   }
-  
-  if(_callbacks[ Proxy::CALLBACK_TYPES::ON_STOP ]) _callbacks[ Proxy::CALLBACK_TYPES::ON_STOP ](nullptr, 0);
-  
-  close(_clientfd); _clientfd = 0;
-  close(_serverfd); _serverfd = 0;
+  this->callbacks().onDisconnect();
+  _cleanup();
 }
 
-void Proxy::setCallback(void (*func)(unsigned char*, size_t), enum CALLBACK_TYPES calltype)
+void Proxy::callbacks( Proxy::Callbacks *e )
+{ _callbacks = e; }
+
+Proxy::Callbacks& Proxy::callbacks()
+{ return (*_callbacks); }
+
+void Proxy::wait( void )
 {
-  _callbacks[calltype] = func;
+  if(_loop->joinable()) _loop->join();
 }
 
-//ONLY CMD.size() < 252 supported.
-void Proxy::_sendviaCmdStr(int fd)
+void Proxy::_cleanup() noexcept
 {
-  std::string cmd = _inject.front(); _inject.pop();
-  unsigned char data[255]; bzero(&data, 255);
-  data[0] = 0x01; data[1] = cmd.length()/2;
+  if( _proxyfd > 0 )  {close(_proxyfd); _proxyfd=0;}
+  if( _clientfd > 0 ) {close(_clientfd); _clientfd=0;}
+  if( _serverfd > 0 ) {close(_serverfd); _serverfd=0;}
   
-  for(size_t i=0; i<cmd.length(); i++)
-  {
-    data[i/2 + 3] += ( cmd[i] >= 0x30 && cmd[i] <= 0x39 ) ? (cmd[i] - 0x30)       << ((i%2 -1) * -4):
-                                                            (cmd[i] - 0x61+0x0a)  << ((i%2 -1) * -4);
-  }
-  
-  _callbacks[Proxy::CALLBACK_TYPES::ON_INJECT](data, data[1] + 3);
-  
-  send(fd, data, data[1] + 3, 0);
+  _run.store(false);
 }

@@ -21,6 +21,20 @@ extern "C"
 class Proxy
 {
 public:
+  class Callbacks
+  {
+  public:
+    Callbacks(){};
+    
+    virtual void onReceived( const unsigned char*, size_t ) = 0;
+    virtual void onSend( const unsigned char*, size_t ) = 0;
+    
+    virtual void onConnect( const struct sockaddr_in&, const struct sockaddr_in& ) = 0;
+    virtual void onDisconnect( void ) = 0;
+    
+    virtual void onError( const std::string& ) = 0;
+  };
+  
   Proxy();
   Proxy( std::string, int );
   Proxy( const struct sockaddr_in );
@@ -28,19 +42,12 @@ public:
   bool operator()();
   
   void start( const struct sockaddr_in );
+  void stop();
   
-  enum CALLBACK_TYPES
-  {
-    ON_SENT = 0, //Packet Sent by Client
-    ON_RECEIVED =1, // Packet Received by DM Server
-    ON_INJECT = 2, // Packet has been injected in the TCP Stream
-    ON_STOP = 3,
-    ON_ERROR = 4
-  };
-  void setCallback(void (*)(unsigned char*, size_t), enum CALLBACK_TYPES);
+  void callbacks( Callbacks* );
+  Callbacks& callbacks( void );
   
-  void inject( const unsigned char*, size_t );
-  void inject( const std::string );
+  void wait( void );
   
   ~Proxy();
   
@@ -50,13 +57,26 @@ protected:
 private:
   std::thread *_loop;
   std::atomic<bool> _run;
-  std::queue<std::string> _inject;
-  
-  void _sendviaCmdStr(int);
   
   int _proxyfd, _clientfd, _serverfd;
+  Callbacks* _callbacks;
   
-  std::array< std::function<void(unsigned char*, size_t)>, 5> _callbacks;
+  void _cleanup() noexcept;
 };
+
+class ProxyDefaultCallbacks : public Proxy::Callbacks
+{
+  public:
+  ProxyDefaultCallbacks(){};
+  
+  void onReceived( const unsigned char*, size_t ){}
+  void onSend( const unsigned char*, size_t ){}
+  
+  void onConnect( const struct sockaddr_in&, const struct sockaddr_in& ){}
+  void onDisconnect( void ){}
+  
+  void onError( const std::string& ){}
+};
+static ProxyDefaultCallbacks nullCallbacks;
 
 #endif //PROXY_HPP
