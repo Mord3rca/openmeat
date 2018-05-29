@@ -49,6 +49,9 @@ public:
   
   void wait( void );
   
+  const int getSockClient( void ) const {return _clientfd;}
+  const int getSockServer( void ) const {return _serverfd;}
+  
   ~Proxy();
   
 protected:

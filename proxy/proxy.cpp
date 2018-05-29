@@ -5,9 +5,7 @@ Proxy::Proxy() :  _loop(nullptr), _run(true),
                   _callbacks( &nullCallbacks )
 {}
 
-Proxy::Proxy( const std::string ip, int port ) :  _loop(nullptr), _run(true),
-                                                  _proxyfd(0), _clientfd(0), _serverfd(0),
-                                                  _callbacks( &nullCallbacks )
+Proxy::Proxy( const std::string ip, int port ) : Proxy()
 {
   struct sockaddr_in addr;
     addr.sin_family = AF_INET;
@@ -17,9 +15,7 @@ Proxy::Proxy( const std::string ip, int port ) :  _loop(nullptr), _run(true),
   start(addr);
 }
 
-Proxy::Proxy( const struct sockaddr_in addr ) : _loop(nullptr), _run(true),
-                                                _proxyfd(0), _clientfd(0), _serverfd(0),
-                                                _callbacks( &nullCallbacks )
+Proxy::Proxy( const struct sockaddr_in addr ) : Proxy()
 {
   start(addr);
 }
