@@ -5,6 +5,8 @@
 #include <iomanip>
 
 #include "proxy.hpp"
+#include "packet.hpp"
+#include "serial.hpp"
 
 extern "C"
 {
@@ -26,6 +28,7 @@ class PrintCallbacks : public Proxy::Callbacks
 {
 public:
   PrintCallbacks(){}
+  ~PrintCallbacks(){}
   
   void onConnect(const struct sockaddr_in&, const struct sockaddr_in&);
   void onDisconnect( void );
@@ -37,4 +40,26 @@ public:
 };
 extern PrintCallbacks pcallbacks;
 
+namespace Deadmaze::Network
+{
+  class Callback : public Proxy::Callbacks
+  {
+  public:
+    Callback();
+    ~Callback();
+    
+    void onConnect( const struct sockaddr_in&, const struct sockaddr_in& );
+    void onDisconnect( void );
+    
+    void onError( const std::string& );
+    
+    void onSend( const unsigned char*, size_t);
+    void onReceived( const unsigned char*, size_t);
+    
+  private:
+    Deadmaze::Network::Packet *_packIn, *_packOut;
+    Deadmaze::Network::PacketWriter *_wIn, *_wOut;
+  };
+  extern Callback callbacks;
+}
 #endif //CALLBACK_HPP

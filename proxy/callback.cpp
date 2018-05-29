@@ -80,3 +80,126 @@ void PrintCallbacks::onSend( const unsigned char* data, size_t len)
 {
   std::cout << "[OUT] - "; prettyprint(std::cout, data, len, true);
 }
+
+Deadmaze::Network::Callback::Callback() :  _packIn(nullptr), _packOut(nullptr),
+                                          _wIn(nullptr), _wOut(nullptr)
+{}
+
+Deadmaze::Network::Callback::~Callback()
+{
+  if( _packIn ) delete _packIn;
+  if( _packOut ) delete _packOut;
+  
+  if( _wIn ) delete _wIn;
+  if( _wOut ) delete _wOut;
+}
+
+void Deadmaze::Network::Callback::onConnect( const struct sockaddr_in& client, const struct sockaddr_in& server)
+{
+  std::cout << "Connected" << std::endl;
+}
+
+void Deadmaze::Network::Callback::onDisconnect( void )
+{
+  std::cout << "DM Connection closed..." << std::endl;
+}
+
+void Deadmaze::Network::Callback::onError( const std::string& err)
+{
+  std::cerr << "Something wrong happend: " << err << std::endl;
+}
+
+void Deadmaze::Network::Callback::onReceived( const unsigned char* data, size_t len)
+{
+  const unsigned char* datastream = data;
+  
+  while( datastream < (data+len) )
+  {
+    if(!_packIn)
+    {
+      size_t packetLen = 0;
+      try
+      {
+        packetLen = Deadmaze::Network::Serial::decodeLen( datastream, Deadmaze::Network::Serial::Server );
+      } catch ( std::exception &err )
+      { std::cerr << ANSI_COLOR_RED << "[-][IN] " << err.what() << ANSI_COLOR_RESET << std::endl; break; }
+      
+      _packIn = new Deadmaze::Network::Packet();
+      _packIn->setLength(packetLen);
+      
+      _wIn = new Deadmaze::Network::PacketWriter( _packIn );
+    }
+    else
+    {
+      try
+      {
+        _wIn->append(datastream, 1);
+        datastream++;
+      }
+      catch ( std::exception &err )
+      {
+        std::cerr << ANSI_COLOR_RED << "[-][IN] " << err.what() << ANSI_COLOR_RESET <<std::endl;
+        delete _packIn; //Will be auto-forward by proxy class.
+        break;
+      }
+      
+      if( _wIn->seek() == _packIn->getLength() )
+      {
+        std::cout << "[IN] - "; //_packIn->print( std::cout );
+        for( size_t i = 0; i < _packIn->getLength(); i++ )
+          std::cout << std::hex << std::setfill('0') << std::setw(2) << +(*_packIn)[i] << ' ';
+        std::cout << std::endl;
+        _packIn = nullptr;
+        delete _wIn;
+      }
+    }
+  }
+}
+
+void Deadmaze::Network::Callback::onSend( const unsigned char* data, size_t len)
+{
+  const unsigned char* datastream = data;
+  
+  while( datastream < (data+len) )
+  {
+    if(!_packOut)
+    {
+      size_t packetLen = 0;
+      try
+      {
+        packetLen = Deadmaze::Network::Serial::decodeLen( datastream, Deadmaze::Network::Serial::Client );
+      } catch ( std::exception &err )
+      { std::cerr << ANSI_COLOR_RED << "[-][OUT] " << err.what() << ANSI_COLOR_RESET << std::endl; break; }
+      
+      _packOut = new Deadmaze::Network::Packet();
+      _packOut->setLength(packetLen);
+      _wOut = new Deadmaze::Network::PacketWriter( _packOut );
+    }
+    else
+    {
+      try
+      {
+        _wOut->append( datastream, 1);
+        datastream++;
+      }
+      catch ( std::exception &err )
+      {
+        std::cerr << ANSI_COLOR_RED << "[-][OUT] " << err.what() << ANSI_COLOR_RESET <<std::endl;
+        delete _packOut; //Will be auto-forward by proxy class.
+        break;
+      }
+      
+      if( _wOut->seek() == _packOut->getLength() )
+      {
+        std::cout << "[OUT] - ";
+        for( size_t i = 0; i < _packOut->getLength(); i++ )
+          std::cout << std::hex << std::setfill('0') << std::setw(2) << +(*_packOut)[i] << ' ';
+        std::cout << std::endl;
+        _packOut = nullptr;
+        delete _wOut;
+      }
+    }
+  }
+}
+
+Deadmaze::Network::Callback Deadmaze::Network::callbacks;
