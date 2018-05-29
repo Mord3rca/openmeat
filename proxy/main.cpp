@@ -4,19 +4,10 @@
 #include "proxy.hpp"
 #include "callback.hpp"
 
-inline size_t decodelen(unsigned char* packet)
-{
-  size_t result = 0;
-  for(size_t i = packet[0]; i > 0; i--)
-    result |= packet[i] << (packet[0] - i) * 8;
-    
-  return result;
-}
-
 Proxy* createProxy( void )
 {
   Proxy* proxy = new Proxy("127.0.0.1", 4444);
-  proxy->callbacks(&pcallbacks);
+  proxy->callbacks(&Deadmaze::Network::callbacks);
   return proxy;
 }
 
