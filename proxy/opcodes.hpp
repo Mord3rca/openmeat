@@ -11,7 +11,8 @@ namespace dm
   {
     DISCONNECT  = 0x1a32,
     
-    KEEP_ALIVE  = 0x1c06,
+    KEEP_ALIVE  = 0x1a1a,
+    PING        = 0x1c06,
     
     MOVE        = 0x6902,
     PERK        = 0x6906,
