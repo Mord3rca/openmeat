@@ -55,10 +55,8 @@ namespace Deadmaze::Network
     
     void onSend( const unsigned char*, size_t);
     void onReceived( const unsigned char*, size_t);
-    
-  private:
-    Deadmaze::Network::Packet *_packIn, *_packOut;
-    Deadmaze::Network::PacketWriter *_wIn, *_wOut;
+
+    Serial in, out;
   };
   extern Callback callbacks;
 }
