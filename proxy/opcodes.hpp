@@ -5,7 +5,7 @@
  * Lots of stuff here ! Have fun reading.
  */
 
-namespace dm
+namespace Deadmaze
 {
   enum opcode
   {
