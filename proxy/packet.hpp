@@ -8,21 +8,13 @@
 
 #include <stdexcept>
 
-#include "opcodes.hpp"
-
 extern "C"
 {
-  #include <sys/types.h>
-  #include <sys/socket.h>
-  
-  #include <unistd.h>
   #include <string.h>
 }
 
 namespace Deadmaze::Network
 {
-  static unsigned char GUARD_BYTE = 0;
-  
   class Packet
   {
   public:

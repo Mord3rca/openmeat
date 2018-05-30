@@ -82,14 +82,14 @@ void Deadmaze::Network::PacketWriter::writeString( const std::string& str)
 
 void Deadmaze::Network::PacketWriter::writeString( const unsigned char* c, const size_t s)
 {
-  
+  //TODO: Write a string... PASCAL way.
 }
 
 template<class T>
 void Deadmaze::Network::PacketWriter::write( const T &e )
 {
   if( _pack->getLength() < _seek + sizeof(T) )
-    throw std::out_of_range("PacketReader: Not enough space for write operation.");
+    throw std::out_of_range("PacketWriter: Not enough space for write operation.");
   
   union
   {
@@ -123,8 +123,7 @@ void Deadmaze::Network::PacketWriter::operator<<( const double& e)
 { write<double>(e); }
 
 Deadmaze::Network::PacketReader::PacketReader( const Packet* pack) : _pack(pack), _seek(0)
-{
-}
+{}
 
 Deadmaze::Network::PacketReader::PacketReader( const Packet& pack) : _seek(0)
 {
