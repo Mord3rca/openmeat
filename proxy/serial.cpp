@@ -2,10 +2,11 @@
 
 namespace Deadmaze::Network
 {
-  Serial::Serial(int sock, TYPE type) : _sock(sock), _type(type)
+  Serial::Serial(int sock, TYPE type) : _sock(sock), _type(type), _GUARD_BYTE(0)
   {}
   
-  Serial::~Serial(){}
+  Serial::~Serial()
+  {}
   
   const int Serial::getSock() const noexcept
   { return _sock; }
@@ -35,17 +36,20 @@ namespace Deadmaze::Network
     send(s.getSock(), header, headerLen+1, MSG_MORE);
     if( s.getType() == Serial::Client )
     {
-      GUARD_BYTE++;
-      send(s.getSock(), &GUARD_BYTE, 1, MSG_MORE);
-      if( GUARD_BYTE > 0x63 ) GUARD_BYTE -= 0x64;
+      s._GUARD_BYTE++;
+      send(s.getSock(), &s._GUARD_BYTE, 1, MSG_MORE);
+      if( s._GUARD_BYTE > 0x63 ) s._GUARD_BYTE -= 0x64;
     }
     send(s.getSock(), psend.getRawData(), psend.getLength(), 0);
     
     return s;
   }
   
-  Serial& operator >>( Serial& s, Packet& preceive )
+  Serial& operator >>( Serial& s, Packet*& preceive )
   {
+    std::lock_guard<std::mutex> lck(s._mtx);
+    preceive = s._inPacket.front();
+    s._inPacket.pop();
     return s;
   }
   
@@ -69,5 +73,58 @@ namespace Deadmaze::Network
     if( type == Client ) datastream++;
     
     return u.s;
+  }
+  
+  void Serial::processIncommingData()
+  {
+    unsigned char buff[2048];
+    size_t bufflen = read(_sock, buff, 2048);
+    
+    processIncommingData(buff, bufflen);
+  }
+  
+  void Serial::processIncommingData( const unsigned char *data, const size_t len )
+  {
+    const unsigned char *datastream = data;
+    
+    while( datastream < (data+len) )
+    {
+      if(!_pack)
+      {
+        size_t packlen = 0;
+        try
+        {
+          packlen = decodeLen( datastream, _type );
+        } catch( std::exception &err )
+        {break;}
+        
+        _pack = new Packet();
+        _writer = new PacketWriter( _pack );
+        _pack->setLength( packlen );
+      }
+      else
+      {
+        try{
+        _writer->append( datastream, 1 );
+        datastream++;
+        } catch(std::exception &err)
+        { delete _pack; _pack = nullptr;
+          delete _writer; _writer=nullptr;
+          break; }
+        
+        if( _writer->seek() == _pack->getLength() )
+        {
+          std::lock_guard<std::mutex> lck( _mtx );
+          _inPacket.push( _pack ); _pack=nullptr;
+          delete _writer;
+        }
+      }
+    }
+  }
+  
+  bool Serial::dataAvailable() noexcept
+  {
+    std::lock_guard<std::mutex> lck(_mtx);
+    return !_inPacket.empty();
   }
 }
