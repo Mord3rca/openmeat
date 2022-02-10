@@ -56,12 +56,12 @@ def worker():
       except zlib.error as err:
         exception = err
         pass
-      
+
       if "Error -5" in exception.args[0]:
         prev_content = content
         binaryData.pop(i)
         break
-     
+
   with open("/tmp/reversed.swf", 'wb') as f:
     f.write(cwsheader)
     f.write(prev_content)
@@ -69,7 +69,7 @@ def worker():
 
 if __name__=="__main__":
   loadFilesInMemory(sys.argv[1])
-  
+
   if not findHeadAndTail():
     print("[-] Something fucked up, exiting")
     exit()
