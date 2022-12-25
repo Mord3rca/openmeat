@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+
+import signal
+
+from proxy import ProxyServer
+from deadmaze import DeadMazeClient, reload_handler
+
+
+HOST, PORT = "localhost", 4444
+
+
+def exit_handler(s, f):
+    print("[+] Stopping proxy server")
+    proxy.stop()
+
+
+if __name__ == "__main__":
+    signal.signal(signal.SIGUSR1, reload_handler)
+    signal.signal(signal.SIGTERM, exit_handler)
+    signal.signal(signal.SIGINT, exit_handler)
+
+    proxy = ProxyServer(HOST, PORT, DeadMazeClient)
+    proxy.serve_forever()
+
