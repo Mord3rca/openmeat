@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
@@ -11,12 +12,25 @@
 
 static bool _init = false;
 static bool _verbose = false;
-static unsigned char globalTry = 0;
 
 static char *hook_ip = "127.0.0.1";
 static unsigned short hook_port = 4444;
 
 static int (*real_connect)(int, const struct sockaddr*, socklen_t) = NULL;
+
+static void hook_info(const char *fmt, ...)
+{
+    va_list ap;
+
+    if(!_verbose)
+        return;
+
+    va_start(ap, fmt);
+    fputs("[HOOK] ", stderr);
+    vfprintf(stderr, fmt, ap);
+    fputs("\n", stderr);
+    va_end(ap);
+}
 
 static void hook_init()
 {
@@ -32,11 +46,23 @@ static void hook_init()
         hook_port = atoi(v);
 
     _verbose = getenv("HOOK_VERBOSE") != NULL;
+    hook_info("Ready");
+    hook_info("Will redirect DeadMaze connection trough %s:%u",
+              hook_ip, hook_port);
+
+    _init = true;
 }
 
-static bool is_hooking_required( const struct sockaddr *addr )
+static bool is_hooking_required( const struct sockaddr_in *addr )
 {
-    return ntohs(((const struct sockaddr_in*)addr)->sin_port) % 1000 == 801;
+    in_port_t port;
+
+    port = ntohs(addr->sin_port);
+
+    hook_info("Inspecting connection %s:%u...",
+              inet_ntoa(addr->sin_addr), port);
+
+    return port % 1000 == 801;
 }
 
 static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
@@ -48,7 +74,12 @@ static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen
         newaddr.sin_port            = htons(hook_port);
         newaddr.sin_addr.s_addr     = inet_addr(hook_ip);
         newaddr.sin_family          = AF_INET;
-    real_connect(sockfd, (const struct sockaddr*)&newaddr, sizeof( newaddr ));
+
+    if( real_connect(sockfd, (const struct sockaddr*)&newaddr, sizeof( newaddr )) != 0) {
+        hook_info("  -> could not connect to SOCKS proxy (%s:%u)",
+                  hook_ip, hook_port);
+        return false;
+    }
 
     // Connected, send SOCKS4 paquet
     socks4req[0] = 4;
@@ -62,28 +93,31 @@ static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen
 
     send(sockfd, &socks4req, sizeof(socks4req), 0);
 
+    hook_info("  -> Connection hooked !");
+
     return true;
 }
 
 // Function to hook
 int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
+    const struct sockaddr_in *addr_in = NULL;
+
     if(!_init)
         hook_init();
 
     if( ! addr->sa_family == AF_INET )
         return real_connect(sockfd, addr, addrlen);
 
-    //Checking if trying to connect to DM server
-    if( is_hooking_required(addr) && globalTry < 3 ) {
-        if( SOCKS4neg(sockfd, addr, addrlen) )
-            return 0;
-        else {
-            globalTry++;
-            shutdown(sockfd, SHUT_RDWR);
-        }
+    addr_in = (const struct sockaddr_in *)addr;
+
+    // Checking if trying to connect to DM server or not
+    if( ! is_hooking_required(addr_in) ) {
+        hook_info("  -> Not hooking for this one.");
+        return real_connect(sockfd, addr, addrlen);
     }
 
-    return real_connect(sockfd, addr, addrlen);
+    // This will probably mess up errno...
+    return SOCKS4neg(sockfd, addr, addrlen) ? 0 : -1;
 }
 
