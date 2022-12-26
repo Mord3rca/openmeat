@@ -30,4 +30,4 @@ To compile this utility use the following command:
 
 * `HOOK_PORT`: Set proxy port (default: 4444)
 
-* `HOOK_VERBOSE`: Increase verbosity if set. (unused)
+* `HOOK_VERBOSE`: Activate verbosity (output vary following the number of IPv4 connection)
