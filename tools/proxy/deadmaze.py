@@ -3,6 +3,7 @@ import parser
 import importlib
 
 from proxy import ProxyClient
+from struct import unpack
 from typing import Tuple
 
 
@@ -10,6 +11,8 @@ class DeadMazePacket:
 
     def __init__(self, client=False) -> None:
         self.__raw = b''
+        self.__opcode = 0
+        self.__data = b''
         self.__from_client = client
 
         self._size = 0
@@ -20,8 +23,8 @@ class DeadMazePacket:
     def __str__(self):
         return f"""\
 DeadMaze {'Client' if self.__from_client else 'Server'} Packet
-OpCode: {self.opcode.hex()}
-Data:   {self.__raw[2:]}"""
+OpCode: {hex(self.opcode)}
+Data:   {self.__data}"""
 
     @staticmethod
     def read_header_size(b: bytes, client: bool) -> Tuple[int, bytes]:
@@ -52,6 +55,11 @@ Data:   {self.__raw[2:]}"""
 
         self._complete = len(self.__raw) == self._size
 
+        if self._complete:
+            self.__opcode = unpack('!H', self.__raw[:2])[0]
+            self.__data = self.__raw[2:]
+            del self.__raw
+
         return data[data_read:]
 
     @property
@@ -59,19 +67,55 @@ Data:   {self.__raw[2:]}"""
         return self._complete
 
     @property
+    def seek(self) -> int:
+        return self._seek
+
+    @seek.setter
+    def seek(self, v):
+        if v > self._size - 2:
+            raise ValueError()
+
+        self._seek = v
+
+    @property
     def size(self) -> int:
         return self._size
 
     @property
-    def raw(self) -> bytes:
-        return self.__raw
+    def data(self) -> bytes:
+        return self.__data
 
     @property
     def opcode(self) -> bytes:
         if not self._complete:
-            raise ValueError()
+            raise RuntimeError()
 
-        return self.__raw[:2]
+        return self.__opcode
+
+    def read_data(self, count: int) -> bytes:
+        if self._seek + count > self._size - 2:
+            raise IndexError('Not enough data left to read')
+
+        a = self._seek
+        b = self._seek = self._seek + count
+
+        return self.__data[a:b]
+
+    def read_byte(self) -> int:
+        return self.read_data(1)[0]
+
+    def read_ushort(self) -> int:
+        return unpack('!H', self.read_data(2))[0]
+
+    def read_uint(self) -> int:
+        return unpack('!I', self.read_data(4))[0]
+
+    def read_ulong(self) -> int:
+        return unpack('!L', self.read_data(8))[0]
+
+    def read_string(self) -> str:
+        s = self.read_ushort()
+        return self.read_data(s).decode()
 
 
 class DeadMazeClient(ProxyClient):
