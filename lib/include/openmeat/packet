@@ -1,0 +1,63 @@
+// Packet -*- C++ -*- header
+
+#ifndef OM_PACKET_HEADER
+#define OM_PACKET_HEADER
+
+#include <ostream>
+#include <initializer_list>
+
+namespace Openmeat::Network
+{
+    const size_t MINIMAL_PACKET_SIZE=2;
+
+    class Packet
+    {
+    public:
+        Packet();
+        Packet(std::initializer_list<unsigned char>);
+        ~Packet();
+
+        size_t length() const noexcept;
+        void reserve(const size_t);
+
+        bool operator==(const Packet&) const noexcept;
+
+        const unsigned char* raw() const noexcept;
+        const unsigned char operator[](size_t) const;
+
+        void seek(const size_t) noexcept;
+        const size_t seek() const noexcept;
+
+        // Methods for reading
+        template<class T> T read();
+
+        friend Packet& operator>>( Packet&, float& );
+        friend Packet& operator>>( Packet&, double& );
+        friend Packet& operator>>( Packet&, uint16_t& );
+        friend Packet& operator>>( Packet&, uint32_t& );
+        friend Packet& operator>>( Packet&, std::string& );
+        friend Packet& operator>>( Packet&, unsigned char& );
+
+        // Methods for writting
+        template<class T> void write(const T&);
+        void write(const unsigned char*, const size_t);
+
+        friend Packet& operator<<( Packet&, float const& );
+        friend Packet& operator<<( Packet&, double const& );
+        friend Packet& operator<<( Packet&, uint16_t const& );
+        friend Packet& operator<<( Packet&, uint32_t const& );
+        friend Packet& operator<<( Packet&, std::string const& );
+        friend Packet& operator<<( Packet&, unsigned char const& );
+
+    protected:
+        unsigned char* _data;
+        size_t _datalen;
+
+        size_t _len;
+        size_t _seek;
+    };
+
+    extern const Packet keepAlive;
+}
+
+#endif //OM_PACKET_HEADER
