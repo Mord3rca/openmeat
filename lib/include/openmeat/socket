@@ -1,0 +1,72 @@
+// Socket -*- C++ -*- header
+
+#ifndef OM_SOCKET_HEADER
+#define OM_SOCKET_HEADER
+
+#include "openmeat/packet"
+
+#include <queue>
+
+extern "C"
+{
+    #include <arpa/inet.h>
+}
+
+namespace Openmeat::Network
+{
+    class Socket
+    {
+    public:
+        enum class TYPE
+        {
+            Client,
+            Server
+        };
+
+        const unsigned char SEQUENCE_MIN = 0;
+        const unsigned char SEQUENCE_MAX = 0x63;
+
+        const size_t IN_BUFF_LEN = 2048;
+
+    public:
+       Socket( TYPE = TYPE::Client );
+       Socket( int, TYPE = TYPE::Client );
+       ~Socket();
+
+       int fd() const noexcept;
+       TYPE type() const noexcept;
+
+       bool empty() const noexcept;
+
+       bool connect(const struct sockaddr_in&);
+       bool connect(const std::string&, const unsigned short);
+
+       // Read method
+       void process();
+       void process(const unsigned char*, const size_t);
+
+       // Write methods
+       void write(const Packet&);
+       void write(const unsigned char*, const size_t, int = 0) const;
+
+       friend Socket& operator >>( Socket&, Packet*& );
+       friend Socket& operator <<( Socket&, const Packet& );
+
+    protected:
+       size_t _encodeLength(const size_t, unsigned char*) const;
+       size_t _decodeLength(const unsigned char*&, size_t) const;
+
+    private:
+       int __sock;
+       TYPE __type;
+       unsigned char __sequence;
+
+       unsigned char *__in_buff;
+       size_t __plen;
+
+       Packet* __packet;
+       std::queue< Packet* > __packets;
+    };
+}
+
+#endif //OM_SOCKET_HEADER
