@@ -20,7 +20,9 @@ LD_PRELOAD=/path/to/hook.so flashplayer https://www.deadmaze.com/alpha/chargeur-
 
 ## Build
 
-To compile this utility use the following command:
+This will be built by CMake.
+
+But if you want to compile this utility manually use the following command:
 
 `gcc -o hook.so hook.c -fPIC -shared -D_GNU_SOURCE -ldl`
 
