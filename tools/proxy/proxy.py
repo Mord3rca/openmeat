@@ -45,6 +45,11 @@ class ProxyClient:
 
         return len(d) != 0
 
+    def process_failure(self, fd: int, server) -> None:
+        for i in self.filesno():
+            server.unregister(i)
+        del self
+
     def client_connected(self, sock_in: Tuple[str, int],
                          sock_to: Tuple[str, int]) -> None:
         pass
@@ -66,35 +71,57 @@ class ProxyServer:
         self._client_obj = cobj
         self._clients = {}
 
-        self._sock = (addr, port)
+        self._p = select.poll()
+        self._sock = None
+        self._sock_addr = (addr, port)
+
+    def __del__(self):
+        del self._p
+
+        if self._sock:
+            self._sock.close()
+            del self._sock
 
     def stop(self) -> None:
         self._run = False
 
+    def register(
+        self, fd: int, callback: callable,
+        callback_fail: callable = None
+    ) -> None:
+        if fd in self._clients.keys():
+            raise ValueError(f"{fd} already register")
+
+        self._p.register(fd, select.POLLIN)
+        self._clients[fd] = (callback, callback_fail)
+
+    def unregister(self, fd: int) -> None:
+        self._p.unregister(fd)
+        del self._clients[fd]
+
+    def _accept_callback(self, fd: int) -> None:
+        c = self._client_obj(*self._sock.accept())
+        for i in c.filesno():
+            self.register(i, c.process, c.process_failure)
+
     def serve_forever(self) -> None:
         self._run = True
+        self._sock = socket.create_server(self._sock_addr, reuse_port=True)
+        self.register(self._sock.fileno(), self._accept_callback)
 
-        with socket.create_server(self._sock, reuse_port=True) as s:
-            p = select.poll()
-            p.register(s, select.POLLIN)
+        while self._run:
+            try:
+                fdEvent = self._p.poll(200)
+            except InterruptedError:
+                continue
 
-            while self._run:
+            for fd, event in fdEvent:
+                c, cf = self._clients[fd]
+                if cf is None:
+                    cf = lambda a, b: None  # noqa: E731
+
                 try:
-                    fdEvent = p.poll(200)
-                except InterruptedError:
-                    continue
-
-                for fd, event in fdEvent:
-                    if fd == s.fileno():
-                        c = self._client_obj(*s.accept())
-                        for i in c.filesno():
-                            p.register(i, select.POLLIN)
-                            self._clients[i] = c
-                    else:
-                        c = self._clients[fd]
-                        if event & select.POLLIN:
-                            if not c.process(fd):
-                                for i in c.filesno():
-                                    p.unregister(i)
-                                    del self._clients[i]
-                                del c
+                    if not c(fd):
+                        cf(fd, self)
+                except Exception:
+                    cf(fd, self)
