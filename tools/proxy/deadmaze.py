@@ -2,9 +2,28 @@ import socket
 import parser
 import importlib
 
+from itertools import cycle
 from proxy import ProxyClient
 from struct import pack, unpack
 from typing import Tuple
+
+community_key = bytes.fromhex('8a0142e1bdc5187f4017010ac1d50fd11c3ca5b1')
+
+
+def community_encode(data: bytes, pos: int) -> bytes:
+    k = community_key[pos:] + community_key[:pos]
+    return bytes(
+        [i ^ j for i, j in zip(data, cycle(k))]
+    )
+
+
+def community_decode(data: bytes, pos: int = -1) -> bytes:
+    if pos == -1:
+        pos = community_key.find(data[0])
+    k = community_key[pos:] + community_key[:pos]
+    return bytes(
+        [i ^ j for i, j in zip(data, cycle(k))]
+    )
 
 
 class DeadMazePacket:
@@ -28,6 +47,7 @@ Data:   {self.__data}"""
 
     @staticmethod
     def read_header_size(b: bytes, client: bool) -> Tuple[int, bytes]:
+        seq = 0
         i = 0
         size = 0
 
@@ -39,9 +59,13 @@ Data:   {self.__data}"""
 
             i += 1
 
-        i += 1 if not client else 2
+        i += 1
 
-        return size, b[i:]
+        if client:
+            seq = b[i]
+            i += 1
+
+        return size, seq, b[i:]
 
     @staticmethod
     def encode_header_size(size: int) -> bytes:
@@ -61,7 +85,7 @@ Data:   {self.__data}"""
 
     def write(self, data: bytes) -> bytes:
         if self._size == 0:
-            self._size, data = self.read_header_size(data, self.__from_client)
+            self._size, seq, data = self.read_header_size(data, self.__from_client)
 
         data_len = len(data)
         remaining_data = self._size - len(self.__raw)
@@ -73,7 +97,10 @@ Data:   {self.__data}"""
 
         if self._complete:
             self.__opcode = unpack('!H', self.__raw[:2])[0]
-            self.__data = self.__raw[2:]
+            if self.__opcode == 0x3c03 and self.__from_client:
+                self.__data = community_decode(self.__raw[2:], seq % 20)
+            else:
+                self.__data = self.__raw[2:]
             del self.__raw
 
         return data[data_read:]
@@ -160,11 +187,11 @@ class DeadMazeClient(ProxyClient):
     def write(self, p: DeadMazePacket) -> None:
         sfd = self._remote if p.from_client else self._client
 
-        buff = DeadMazePacket.encode_header_size(p.size) +\
-            (self._increment_sequence() if p.from_client else b'') +\
-            pack("!H", p.opcode) + p.data
+        seq = self._increment_sequence() if p.from_client else b''
+        op = pack("!H", p.opcode)
+        data = p.data if not(p.opcode == 0x3c03 and p.from_client) else community_encode(p.data, self._sequence % 20)
 
-        sfd.send(buff)
+        sfd.send(DeadMazePacket.encode_header_size(p.size) + seq + op + data)
 
     def process(self, fd: int) -> bool:
         if fd not in self.filesno():
