@@ -105,6 +105,12 @@ Data:   {self.__data}"""
 
         return data[data_read:]
 
+    def write_raw(self, data: bytes) -> None:
+        self.__size = len(data)
+        self.__opcode = unpack('!H', data[:2])[0]
+        self.__data = data[2:]
+        self._complete = True
+
     @property
     def from_client(self) -> bool:
         return self.__from_client
@@ -205,6 +211,15 @@ class DeadMazeClient(ProxyClient):
         callback(d)
 
         return len(d) != 0
+
+    def inject(self, data: bytes, from_client: bool = False):
+        p = DeadMazePacket(from_client)
+        p.write_raw(data)
+
+        if not p.complete:
+            print('Packet is wrong, aborting injection')
+
+        self.write(p)
 
     def client_connected(self, sock_in: Tuple[str, int],
                          sock_to: Tuple[str, int]) -> None:

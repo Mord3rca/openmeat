@@ -69,7 +69,8 @@ class ProxyServer:
     def __init__(self, addr: str, port: int, cobj=ProxyClient) -> None:
         self._run = False
         self._client_obj = cobj
-        self._clients = {}
+        self._clients = []
+        self._callbacks = {}
 
         self._p = select.poll()
         self._sock = None
@@ -82,6 +83,9 @@ class ProxyServer:
             self._sock.close()
             del self._sock
 
+    def get_clients(self):
+        return self._clients
+
     def stop(self) -> None:
         self._run = False
 
@@ -89,20 +93,21 @@ class ProxyServer:
         self, fd: int, callback: callable,
         callback_fail: callable = None
     ) -> None:
-        if fd in self._clients.keys():
+        if fd in self._callbacks.keys():
             raise ValueError(f"{fd} already register")
 
         self._p.register(fd, select.POLLIN)
-        self._clients[fd] = (callback, callback_fail)
+        self._callbacks[fd] = (callback, callback_fail)
 
     def unregister(self, fd: int) -> None:
         self._p.unregister(fd)
-        del self._clients[fd]
+        del self._callbacks[fd]
 
     def _accept_callback(self, fd: int) -> None:
         c = self._client_obj(*self._sock.accept())
         for i in c.filesno():
             self.register(i, c.process, c.process_failure)
+        self._clients.append(c)
 
     def serve_forever(self) -> None:
         self._run = True
@@ -116,7 +121,7 @@ class ProxyServer:
                 continue
 
             for fd, event in fdEvent:
-                c, cf = self._clients[fd]
+                c, cf = self._callbacks[fd]
                 if cf is None:
                     cf = lambda a, b: None  # noqa: E731
 
