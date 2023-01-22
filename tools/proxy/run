@@ -3,6 +3,7 @@
 import signal
 
 from proxy import ProxyServer
+from injector import Injector
 from deadmaze import DeadMazeClient, reload_handler
 
 
@@ -20,5 +21,7 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, exit_handler)
 
     proxy = ProxyServer(HOST, PORT, DeadMazeClient)
+    injector = Injector("/tmp/om-injector", proxy.get_clients)
+    proxy.register(injector.fifo, injector.process, injector.failure)
     proxy.serve_forever()
 
