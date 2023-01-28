@@ -38,6 +38,8 @@ namespace Openmeat::Network
 
        bool empty() const noexcept;
 
+       unsigned char sequence() const noexcept;
+
        bool connect(const struct sockaddr_in&);
        bool connect(const std::string&, const unsigned short);
 
@@ -53,8 +55,8 @@ namespace Openmeat::Network
        friend Socket& operator <<( Socket&, const Packet& );
 
     protected:
+       size_t _decodeLength(const unsigned char*&, size_t);
        size_t _encodeLength(const size_t, unsigned char*) const;
-       size_t _decodeLength(const unsigned char*&, size_t) const;
 
     private:
        int __sock;

@@ -44,6 +44,10 @@ bool Socket::empty() const noexcept {
     return __packets.empty();
 }
 
+unsigned char Socket::sequence() const noexcept {
+    return __sequence;
+}
+
 bool Socket::connect(const struct sockaddr_in& addr) {
     __sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -121,7 +125,7 @@ void Socket::write(const unsigned char* data, const size_t len, int flags) const
     ::send(__sock, data, len, flags);
 }
 
-size_t Socket::_decodeLength(const unsigned char*& data, size_t len) const {
+size_t Socket::_decodeLength(const unsigned char*& data, size_t len) {
     size_t c = 0;
     size_t r = 0;
 
@@ -139,9 +143,8 @@ size_t Socket::_decodeLength(const unsigned char*& data, size_t len) const {
     data += c;
 
     // Skipping sequence from Client. Unchecked for now.
-    if(__type == TYPE::Server) {
-        data++;
-    }
+    if(__type == TYPE::Server)
+        __sequence = *(data++);
 
     return r;
 }
