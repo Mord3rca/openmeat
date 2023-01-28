@@ -7,14 +7,16 @@
  * Lots of stuff here ! Have fun reading.
  */
 
-namespace Openmeat
+namespace Openmeat::Network
 {
-    enum class opcode
+    enum class opcode: uint16_t
     {
         DISCONNECT  = 0x1a32,
 
         KEEP_ALIVE  = 0x1a1a,
         PING        = 0x1c06,
+
+        COMMUNITY   = 0x3c03,
 
         MOVE        = 0x6902,
         PERK        = 0x6906,
