@@ -42,8 +42,8 @@ namespace Openmeat::Network
        bool connect(const std::string&, const unsigned short);
 
        // Read method
-       void process();
-       void process(const unsigned char*, const size_t);
+       void read();
+       void read(const unsigned char*, const size_t);
 
        // Write methods
        void write(const Packet&);

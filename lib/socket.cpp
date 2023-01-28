@@ -64,14 +64,14 @@ bool Socket::connect(const std::string& ip, const unsigned short port) {
     return connect(addr);
 }
 
-void Socket::process() {
+void Socket::read() {
     if(!__in_buff) __in_buff = new unsigned char[IN_BUFF_LEN];
     ssize_t len = recv(__sock, __in_buff, IN_BUFF_LEN, 0);
 
-    process(__in_buff, len);
+    read(__in_buff, len);
 }
 
-void Socket::process(const unsigned char *data, const size_t len) {
+void Socket::read(const unsigned char *data, const size_t len) {
     const unsigned char *first = data;
     const unsigned char *last  = first + len;
 
