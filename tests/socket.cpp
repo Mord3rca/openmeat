@@ -27,7 +27,7 @@ void NetworkSocketTest::testReadClientPacket() {
     Socket s(Socket::TYPE::Client); Packet *p;
     const unsigned char data[] = {0x02, 0x1a, 0x1a};
 
-    s.process(data, sizeof(data));
+    s.read(data, sizeof(data));
     s >> p;
 
     CPPUNIT_ASSERT(*p == keepAlive);
@@ -40,7 +40,7 @@ void NetworkSocketTest::testReadServerPacket() {
     const unsigned char data[] = {0x04, 0x55, 0x22, 0x33, 0x44, 0x55};
     uint32_t i;
 
-    s.process(data, sizeof(data));
+    s.read(data, sizeof(data));
     s >> p;
 
     *p >> i;
@@ -80,7 +80,7 @@ void NetworkSocketTest::testLongRead() {
     Socket s(Socket::TYPE::Server); Packet *p;
     uint16_t opcode;
 
-    s.process(LONGREAD_DATA, sizeof(LONGREAD_DATA));
+    s.read(LONGREAD_DATA, sizeof(LONGREAD_DATA));
     s >> p;
 
     *p >> opcode;
@@ -96,8 +96,8 @@ void NetworkSocketTest::testFragmentedRead() {
     const unsigned char data1[] = {0x02};
     const unsigned char data2[] = {0x1a, 0x1a};
 
-    s.process(data1, sizeof(data1));
-    s.process(data2, sizeof(data2));
+    s.read(data1, sizeof(data1));
+    s.read(data2, sizeof(data2));
 
     s >> p;
 
@@ -113,7 +113,7 @@ void NetworkSocketTest::testMultipleRead() {
         0x02, 0x1a, 0x1a,
         0x02, 0x1a, 0x1a,
     };
-    s.process(data, sizeof(data));
+    s.read(data, sizeof(data));
 
     for(int i = 0; i < 4; i++) {
         s >> p;
