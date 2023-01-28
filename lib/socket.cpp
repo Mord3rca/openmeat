@@ -138,7 +138,7 @@ size_t Socket::_decodeLength(const unsigned char*& data, size_t len) {
             throw std::out_of_range("Not enough data to decode len");
 
         r += (data[c] & 0x7f) << 7*c;
-    } while(data[c++] & 0x80 != 0);
+    } while(data[c++] & 0x80);
 
     data += c;
 
