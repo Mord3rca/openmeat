@@ -58,6 +58,8 @@ namespace Openmeat::Network
        size_t _decodeLength(const unsigned char*&, size_t);
        size_t _encodeLength(const size_t, unsigned char*) const;
 
+       virtual void onPacketReceived(Packet*&);
+
     private:
        int __sock;
        TYPE __type;

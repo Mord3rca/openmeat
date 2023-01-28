@@ -96,7 +96,7 @@ void Socket::read(const unsigned char *data, const size_t len) {
 
         if(__packet->length() == __plen) {
             __packet->seek(0);
-            __packets.push(__packet);
+            onPacketReceived(__packet);
             __packet = nullptr;
         }
     }
@@ -166,6 +166,10 @@ size_t Socket::_encodeLength(const size_t len, unsigned char* data) const {
     } while( true );
 
     return c + 1;
+}
+
+void Socket::onPacketReceived(Packet*& p){
+            __packets.push(p);
 }
 
 namespace Openmeat::Network {
