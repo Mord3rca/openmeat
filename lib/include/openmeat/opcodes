@@ -32,6 +32,9 @@ namespace Openmeat::Network
         ERROR = 0xffff
     };
 
+    bool operator==(uint16_t const &a, opcode const &b);
+    bool operator!=(uint16_t const &a, opcode const &b);
+
     enum class TRAVEL_DEST
     {
         SURVIVOR_PLACE  = 0x0001,
