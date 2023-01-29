@@ -4,26 +4,46 @@
 # of deadmeat.swf (https://www.deadmaze.com/alpha/deadmeat.swf)
 
 import os
-import sys
 import stat
 import zlib
+from sys import argv
+from urllib.request import urlopen
+from tempfile import TemporaryDirectory
 
 from typing import List
 
+FFDEC_EXE = os.getenv('FFDEC_EXE', 'ffdec')
+OUTPUT_FILE = argv[1] if len(argv) >= 2 else 'reversed.swf'
+loader_url = 'https://www.deadmaze.com/alpha/deadmeat.swf'
 
-def loadFilesInMemory(path: str) -> List[bytes]:
+
+def exportBinaryData(path: str) -> List[str]:
+    deadmeat = f"{path}/deadmeat.swf"
+
+    with urlopen(loader_url) as url:
+        if url.getcode() != 200:
+            raise Exception("Can't DL deadmeat.swf")
+
+        with open(deadmeat, 'wb') as f:
+            f.write(url.read())
+
+    os.system(f"{FFDEC_EXE} -export binarydata '{path}/data' '{deadmeat}'")
+
+    return [os.path.join(path, 'data', i) for i in os.listdir(f"{path}/data")]
+
+
+def loadFilesInMemory() -> List[bytes]:
     global verbose
-
     result = []
 
-    for f in os.listdir(path):
-        pathname = os.path.join(path, f)
-        mode = os.stat(pathname).st_mode
-        if stat.S_ISREG(mode):
-            if verbose:
-                print(f"[*] Loaded in memory: {pathname}")
-        with open(pathname, 'rb') as f:
-            result.append(f.read())
+    with TemporaryDirectory(prefix='bloader_') as tmpdir:
+        for pathname in exportBinaryData(tmpdir):
+            mode = os.stat(pathname).st_mode
+            if stat.S_ISREG(mode):
+                if verbose:
+                    print(f"[*] Loading in memory: {pathname}")
+            with open(pathname, 'rb') as f:
+                result.append(f.read())
 
     return result
 
@@ -33,11 +53,11 @@ def findHead() -> bool:
 
     # Find the Head
     for i in range(0, len(binaryData)):
-        if(binaryData[i][0:3] == b'CWS'):
+        if binaryData[i][0:3] == b'CWS':
             head = binaryData[i]
             binaryData.pop(i)
             break
-    if(head == b''):
+    if head == b'':
         print("[-] Couldn't find the CWS header in all bin Data...")
         return False
 
@@ -63,7 +83,8 @@ def worker() -> None:
                 binaryData.pop(i)
                 break
 
-    with open("/tmp/reversed.swf", 'wb') as f:
+    print(f"[+] Writing {OUTPUT_FILE}...")
+    with open(OUTPUT_FILE, 'wb') as f:
         f.write(cwsheader)
         f.write(prev_content)
 
@@ -73,7 +94,7 @@ if __name__ == "__main__":
     head = b''
     cwsheader = b''
 
-    binaryData = loadFilesInMemory(sys.argv[1])
+    binaryData = loadFilesInMemory()
 
     if not findHead():
         exit("[-] Something fucked up, exiting")
