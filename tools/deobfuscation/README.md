@@ -2,12 +2,9 @@
 
 ## Usage
 
-Use `ffdec` to export binary data of `deadmeat.swf` and use the break loader script
-
 ```
-wget https://www.deadmaze.com/alpha/deadmeat.swf
-ffdec -export binarydata data/ deadmeat.swf
-python3 break_loader.py data/
+export FFDEC_EXE="path/to/ffdec"
+python3 break_loader.py <output_filename>
 ```
 
 ## Dropped method
