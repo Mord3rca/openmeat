@@ -9,7 +9,6 @@ class NetworkPacketTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_EXCEPTION(testOverflow, std::out_of_range);
     CPPUNIT_TEST_EXCEPTION(testStringOverflow, std::out_of_range);
     CPPUNIT_TEST(testResizeUp);
-    CPPUNIT_TEST(testResizeDown);
     CPPUNIT_TEST(testReadWriteFloat);
     CPPUNIT_TEST(testReadWriteDouble);
     CPPUNIT_TEST(testReadWriteUint16);
@@ -40,16 +39,16 @@ using namespace Openmeat::Network;
 void NetworkPacketTest::testConstKeepAlive() {
     Packet s;
     s.reserve(2);
-    s << (uint16_t)0x1a1a;
+    s.writeAt(0, (uint16_t)0x1a1a);
 
     CPPUNIT_ASSERT(s == keepAlive);
 }
 
 void NetworkPacketTest::testInitializerList() {
     std::initializer_list<unsigned char> const v({0xff, 0xee, 0xcc, 0xbb, 0xaa});
-    Packet s(v); auto data = s.raw();
+    Packet s(v); auto data = s.data();
 
-    CPPUNIT_ASSERT(s.length() == v.size());
+    CPPUNIT_ASSERT(s.size() == v.size());
     for(auto const &i : v) {
         CPPUNIT_ASSERT(*data == i);
         data++;
@@ -61,9 +60,8 @@ void NetworkPacketTest::testOverflow() {
     uint32_t data = 0x00;
 
     s.reserve(8);
-    // | This is fine  | but not this one
-    // v               v
-    s << data << data << data;
+    s.writeAt(0, data); // This is fine
+    s.writeAt(8, data); // But not this one
 }
 
 void NetworkPacketTest::testStringOverflow() {
@@ -71,8 +69,9 @@ void NetworkPacketTest::testStringOverflow() {
     std::string data("This is too much information.");
 
     s.reserve(8);
-    s << data;
+    s.writeAt(0, data);
 }
+
 
 void NetworkPacketTest::testResizeUp() {
     std::initializer_list<unsigned char> const expected(
@@ -82,28 +81,16 @@ void NetworkPacketTest::testResizeUp() {
     uint32_t data = 0x11223344;
 
     s.reserve(24);
-    s << data;
+    s.writeAt(2, data);
 
     s.reserve(32);
 
-    auto d = s.raw();
-    CPPUNIT_ASSERT(s.length() == expected.size());
+    auto d = s.data();
+    CPPUNIT_ASSERT(s.size() == expected.size());
     for(auto const& i : expected) {
         CPPUNIT_ASSERT(i == *d);
         d++;
     }
-}
-
-void NetworkPacketTest::testResizeDown() {
-    Packet s;
-    s.reserve(256);
-
-    s << (uint32_t)0x11223344 << (uint32_t)0x55667788 << (uint32_t)0x99aabbcc;
-
-    s.reserve(2);
-    s << (uint16_t)0x1a1a;
-
-    CPPUNIT_ASSERT(s == keepAlive);
 }
 
 void NetworkPacketTest::testReadWriteFloat() {
@@ -112,10 +99,11 @@ void NetworkPacketTest::testReadWriteFloat() {
     Packet s;
 
     s.reserve(sizeof(float)*2);
-    s << a << b;
+    s.writeAt(0, a);
+    s.writeAt(sizeof(float), b);
 
-    s.seek(0);
-    s >> c >> d;
+    s.readAt(0, c);
+    s.readAt(sizeof(float), d);
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
@@ -127,10 +115,11 @@ void NetworkPacketTest::testReadWriteDouble() {
     Packet s;
 
     s.reserve(sizeof(double)*2);
-    s << a << b;
+    s.writeAt(0, a);
+    s.writeAt(sizeof(double), b);
 
-    s.seek(0);
-    s >> c >> d;
+    s.readAt(0, c);
+    s.readAt(sizeof(double), d);
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
@@ -142,10 +131,11 @@ void NetworkPacketTest::testReadWriteUint16() {
     Packet s;
 
     s.reserve(sizeof(uint16_t)*2);
-    s << a << b;
+    s.writeAt(0, a);
+    s.writeAt(sizeof(uint16_t), b);
 
-    s.seek(0);
-    s >> c >> d;
+    s.readAt(0, c);
+    s.readAt(sizeof(uint16_t), d);
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
@@ -157,10 +147,11 @@ void NetworkPacketTest::testReadWriteUint32() {
     Packet s;
 
     s.reserve(sizeof(uint32_t)*2);
-    s << a << b;
+    s.writeAt(0, a);
+    s.writeAt(sizeof(uint32_t), b);
 
-    s.seek(0);
-    s >> c >> d;
+    s.readAt(0, c);
+    s.readAt(sizeof(uint32_t), d);
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
@@ -172,10 +163,11 @@ void NetworkPacketTest::testReadWriteUchar() {
     Packet s;
 
     s.reserve(sizeof(unsigned char)*2);
-    s << a << b;
+    s.writeAt(0, a);
+    s.writeAt(sizeof(unsigned char), b);
 
-    s.seek(0);
-    s >> c >> d;
+    s.readAt(0, c);
+    s.readAt(sizeof(unsigned char), d);
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
@@ -187,10 +179,11 @@ void NetworkPacketTest::testReadWriteString() {
     Packet s;
 
     s.reserve(sizeof(uint16_t)*2 + a.length() + b.length());
-    s << a << b;
+    s.writeAt(0, a);
+    s.writeAt(a.length() + sizeof(uint16_t), b);
 
-    s.seek(0);
-    s >> c >> d;
+    s.readAt(0, c);
+    s.readAt(c.length() + sizeof(uint16_t), d);
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
