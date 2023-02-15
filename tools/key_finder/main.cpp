@@ -30,9 +30,9 @@ class Parser : public Socket {
             // number is right after the comunity command
             // which is a uint16_t so we offset the position
             auto pos = sequence() + 2;
-            const unsigned char *data = p->raw();
+            const unsigned char *data = p->data();
 
-            *p >> opcode;
+            p->readAt(0, opcode);
             if(opcode != opcode::COMMUNITY)
                 goto end;
             seq.s++;
