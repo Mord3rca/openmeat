@@ -27,6 +27,23 @@ namespace Openmeat::Network
         void writeAt(Packet::size_type, const unsigned char*, const size_t);
     };
 
+    class PacketWriter
+    {
+    public:
+        PacketWriter();
+        PacketWriter(Packet*);
+        PacketWriter(Packet&);
+
+        Packet::size_type seek() const noexcept;
+        void seek(const Packet::size_type) noexcept;
+
+        template<class T> PacketWriter& operator<<(T const &);
+
+    private:
+        Packet *__p;
+        Packet::size_type __s;
+    };
+
     extern const Packet keepAlive;
 }
 
