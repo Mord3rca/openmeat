@@ -12,73 +12,36 @@ extern "C"
 
 using namespace Openmeat::Network;
 
+// Force Template generation
+template void Packet::readAt<float>(Packet::size_type, float&);
+template void Packet::readAt<double>(Packet::size_type, double&);
+template void Packet::readAt<uint16_t>(Packet::size_type, uint16_t&);
+template void Packet::readAt<uint32_t>(Packet::size_type, uint32_t&);
+template void Packet::readAt<unsigned char>(Packet::size_type, unsigned char&);
+
+template void Packet::writeAt<float>(Packet::size_type, float const&);
+template void Packet::writeAt<double>(Packet::size_type, double const&);
+template void Packet::writeAt<uint16_t>(Packet::size_type, uint16_t const&);
+template void Packet::writeAt<uint32_t>(Packet::size_type, uint32_t const&);
+template void Packet::writeAt<unsigned char>(Packet::size_type, unsigned char const&);
+
+// Constant packets
 const Packet Openmeat::Network::keepAlive({0x1a, 0x1a});
 
 
-Packet::Packet() : _data(nullptr), _datalen(0), _len(0), _seek(0)
-{}
+Packet::Packet() : std::vector<unsigned char>() {}
 
-Packet::Packet(std::initializer_list<unsigned char> l) : Packet() {
-    reserve(l.size());
-    memcpy(_data, l.begin(), l.size());
-    _len = l.size();
-}
+Packet::Packet(std::initializer_list<unsigned char> l) : std::vector<unsigned char>(l) {}
 
-Packet::~Packet() {
-    if( _data ) delete[] _data;
-}
-
-size_t Packet::length() const noexcept {
-    return _len;
-}
-
-void Packet::reserve( size_t len ) {
+void Packet::reserve(Packet::size_type len) {
     if( len < MINIMAL_PACKET_SIZE )
         throw std::invalid_argument("Invalid packet size");
 
-    unsigned char* new_data = new unsigned char[ len ];
-    size_t new_len = (len > _len) ? _len : 0 ;
-    if( _data )
-    {
-        memcpy( new_data, _data, new_len );
-        _seek = new_len;
-        delete[] _data;
-    }
-    _len = new_len;
-    _data = new_data;
-    _datalen = len;
+    std::vector<unsigned char>::reserve(len);
 }
 
-bool Packet::operator==(const Packet& p) const noexcept {
-    if(p.length() != _len)
-        return false;
-
-    for(size_t i=0; i<_len; i++)
-        if(p[i] != _data[i]) return false;
-
-    return true;
-}
-
-const unsigned char* Packet::raw() const noexcept
-{ return _data; }
-
-const unsigned char Packet::operator []( size_t pos ) const {
-    if( pos > _len )
-        throw std::out_of_range("Packet: operator[] out of range.");
-
-    return _data[pos];
-}
-
-void Packet::seek(const size_t s) noexcept {
-    _seek = s;
-}
-
-const size_t Packet::seek() const noexcept {
-    return _seek;
-}
-
-template<class T> T Packet::read() {
-    if( length() < _seek + sizeof(T) )
+template<class T> void Packet::readAt(Packet::size_type pos, T &out) {
+    if( pos + sizeof(T) > size() )
         throw std::out_of_range("Packet: Not enough data to read");
 
     union {
@@ -89,7 +52,7 @@ template<class T> T Packet::read() {
     #if __BYTE_ORDER == __LITTLE_ENDIAN
     for(size_t i = sizeof(T)-1;;i--)
     {
-        u.c[i] = _data[_seek++];
+        u.c[i] = data()[pos++];
         if (i==0) break;
     }
     #elif __BYTE_ORDER == __BIG_ENDIAN
@@ -98,59 +61,27 @@ template<class T> T Packet::read() {
     #error "Please set endianess"
     #endif
 
-    return u.e;
+    out = u.e;
 }
 
-namespace Openmeat::Network {
-    Packet& operator >>(Packet& p, float& s) {
-        s = p.read<float>();
-        return p;
-    }
+template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &str) {
+    uint16_t len;
+    readAt<uint16_t>(pos, len);
 
-    Packet& operator >>(Packet& p, double& s) {
-        s = p.read<double>();
-        return p;
-    }
+    if(pos + sizeof(uint16_t) + len > size())
+        throw std::out_of_range("Not enough data left to read string");
 
-    Packet& operator >>(Packet& p, uint16_t& s) {
-        s = p.read<uint16_t>();
-        return p;
-    }
-
-    Packet& operator >>(Packet& p, uint32_t& s) {
-        s = p.read<uint32_t>();
-        return p;
-    }
-
-    Packet& operator >>(Packet& p, std::string& s) {
-        auto len = p.read<uint16_t>();
-        if ( p._seek + len > p._datalen)
-            throw std::out_of_range("Not enough data left to read string");
-
-        s = std::string(reinterpret_cast<const char*>(p._data + p._seek), len);
-        p._seek += len;
-        return p;
-    }
-
-    Packet& operator >>(Packet& p, unsigned char& s) {
-        s = p.read<unsigned char>();
-        return p;
-    }
+    str = std::string(reinterpret_cast<const char*>(data() + pos + sizeof(uint16_t)), len);
 }
 
-void Packet::write(const unsigned char* s, const size_t len) {
-    if( _datalen < _seek + len )
+template<class T> void Packet::writeAt( Packet::size_type pos, T const &e) {
+    if( pos + sizeof(T) > capacity() )
         throw std::out_of_range("Packet: Not enough space for write operation.");
 
-    memcpy(_data + _seek, s, len);
-    _seek += len;
-
-    if(_seek > _len) _len = _seek;
-}
-
-template<class T> void Packet::write( T const &e ) {
-    if( _datalen < _seek + sizeof(T) )
-        throw std::out_of_range("Packet: Not enough space for write operation.");
+    // Fill first bytes if not existing
+    while(size() < pos) {
+        push_back(0);
+    }
 
     union {
         T e;
@@ -159,7 +90,7 @@ template<class T> void Packet::write( T const &e ) {
 
     #if __BYTE_ORDER == __LITTLE_ENDIAN
     for(size_t i = sizeof(T)-1;; i--) {
-        _data[_seek++] = u.c[i];
+        writeAt(pos++, &u.c[i], 1);
         if(i == 0) break;
     }
     #elif __BYTE_ORDER == __BIG_ENDIAN
@@ -167,49 +98,31 @@ template<class T> void Packet::write( T const &e ) {
     #else
     #error "Please set endianess"
     #endif
-
-    if(_seek > _len) _len = _seek;
 }
 
-template<> void Packet::write<std::string>(const std::string &e) {
-    auto len = e.length();
+void Packet::writeAt(Packet::size_type pos, const unsigned char* s, const size_t len) {
+    auto blen = pos + len;
 
+    if( capacity() < blen )
+        throw std::out_of_range("Packet: Not enough space for write operation.");
+
+    while(size() < pos) {
+        push_back(0);
+    }
+
+    for(auto i = 0; i < len; i++) {
+        if(pos + i < size())
+            data()[pos+i] = s[i];
+        else
+            push_back(s[i]);
+    }
+}
+
+template<> void Packet::writeAt<std::string>(Packet::size_type pos, std::string const &e) {
+    auto len = e.length();
     if( len > USHRT_MAX )
         throw std::out_of_range("Could not write string, size exceed 65535");
 
-    write<uint16_t>(len);
-    write(reinterpret_cast<const unsigned char*>(e.c_str()), len);
-}
-
-
-namespace Openmeat::Network {
-    Packet& operator<<(Packet& p, float const& e) {
-        p.write<float>(e);
-        return p;
-    }
-
-    Packet& operator<<(Packet& p, double const& e) {
-        p.write<double>(e);
-        return p;
-    }
-
-    Packet& operator<<(Packet& p, uint16_t const& e) {
-        p.write<uint16_t>(e);
-        return p;
-    }
-
-    Packet& operator<<(Packet& p, uint32_t const& e) {
-        p.write<uint32_t>(e);
-        return p;
-    }
-
-    Packet& operator<<(Packet& p, std::string const& e) {
-        p.write<std::string>(e);
-        return p;
-    }
-
-    Packet& operator<<(Packet& p, unsigned char const& e) {
-        p.write<unsigned char>(e);
-        return p;
-    }
+    writeAt<uint16_t>(pos, len);
+    writeAt(pos + sizeof(uint16_t), reinterpret_cast<const unsigned char*>(e.c_str()), len);
 }
