@@ -44,6 +44,23 @@ namespace Openmeat::Network
         Packet::size_type __s;
     };
 
+    class PacketReader
+    {
+    public:
+        PacketReader();
+        PacketReader(Packet*);
+        PacketReader(Packet&);
+
+        void seek(const Packet::size_type);
+        Packet::size_type seek() const noexcept;
+
+        template<class T> PacketReader& operator>>(T&);
+
+    private:
+        Packet *__p;
+        Packet::size_type __s;
+    };
+
     extern const Packet keepAlive;
 }
 
