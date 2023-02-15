@@ -43,9 +43,9 @@ void NetworkSocketTest::testReadServerPacket() {
     s.read(data, sizeof(data));
     s >> p;
 
-    *p >> i;
+    p->readAt(0, i);
 
-    CPPUNIT_ASSERT(p->length() == 4);
+    CPPUNIT_ASSERT(p->size() == 4);
     CPPUNIT_ASSERT(i == 0x22334455);
 
     delete p;
@@ -83,9 +83,9 @@ void NetworkSocketTest::testLongRead() {
     s.read(LONGREAD_DATA, sizeof(LONGREAD_DATA));
     s >> p;
 
-    *p >> opcode;
+    p->readAt(0, opcode);
 
-    CPPUNIT_ASSERT(p->length() == 349);
+    CPPUNIT_ASSERT(p->size() == 349);
     CPPUNIT_ASSERT(opcode == 0xaabb);
 
     delete p;

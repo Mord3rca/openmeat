@@ -88,14 +88,13 @@ void Socket::read(const unsigned char *data, const size_t len) {
             __packet->reserve(__plen);
         }
 
-        data_remaining = __plen - __packet->length();
+        data_remaining = __plen - __packet->size();
         data_remaining = (data_remaining > (last - first) ? (last - first) : data_remaining);
 
-        __packet->write(first, data_remaining);
+        __packet->writeAt(__packet->size(), first, data_remaining);
         first += data_remaining;
 
-        if(__packet->length() == __plen) {
-            __packet->seek(0);
+        if(__packet->size() == __plen) {
             onPacketReceived(__packet);
             __packet = nullptr;
         }
@@ -104,7 +103,7 @@ void Socket::read(const unsigned char *data, const size_t len) {
 
 void Socket::write(const Packet& p) {
     unsigned char d[8] = {0};
-    size_t plen = p.length();
+    size_t plen = p.size();
     size_t hlen = _encodeLength(plen, d);
 
 
@@ -115,7 +114,7 @@ void Socket::write(const Packet& p) {
     }
 
     write(d, hlen, MSG_MORE);
-    write(p.raw(), plen);
+    write(p.data(), plen);
 }
 
 void Socket::write(const unsigned char* data, const size_t len, int flags) const {
