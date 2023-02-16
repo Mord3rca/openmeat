@@ -13,11 +13,11 @@ extern "C"
 using namespace Openmeat::Network;
 
 // Force Template generation
-template void Packet::readAt<float>(Packet::size_type, float&);
-template void Packet::readAt<double>(Packet::size_type, double&);
-template void Packet::readAt<uint16_t>(Packet::size_type, uint16_t&);
-template void Packet::readAt<uint32_t>(Packet::size_type, uint32_t&);
-template void Packet::readAt<unsigned char>(Packet::size_type, unsigned char&);
+template void Packet::readAt<float>(Packet::size_type, float&) const;
+template void Packet::readAt<double>(Packet::size_type, double&) const;
+template void Packet::readAt<uint16_t>(Packet::size_type, uint16_t&) const;
+template void Packet::readAt<uint32_t>(Packet::size_type, uint32_t&) const;
+template void Packet::readAt<unsigned char>(Packet::size_type, unsigned char&) const;
 
 template void Packet::writeAt<float>(Packet::size_type, float const&);
 template void Packet::writeAt<double>(Packet::size_type, double const&);
@@ -40,7 +40,8 @@ void Packet::reserve(Packet::size_type len) {
     std::vector<unsigned char>::reserve(len);
 }
 
-template<class T> void Packet::readAt(Packet::size_type pos, T &out) {
+
+template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
     if( pos + sizeof(T) > size() )
         throw std::out_of_range("Packet: Not enough data to read");
 
@@ -64,7 +65,7 @@ template<class T> void Packet::readAt(Packet::size_type pos, T &out) {
     out = u.e;
 }
 
-template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &str) {
+template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &str) const {
     uint16_t len;
     readAt<uint16_t>(pos, len);
 
