@@ -15,6 +15,7 @@ class NetworkPacketTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testReadWriteUint32);
     CPPUNIT_TEST(testReadWriteUchar);
     CPPUNIT_TEST(testReadWriteString);
+    CPPUNIT_TEST(testOpcode);
     CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -30,6 +31,7 @@ public:
     void testReadWriteUint32();
     void testReadWriteUchar();
     void testReadWriteString();
+    void testOpcode();
 };
 
 CPPUNIT_TEST_SUITE_REGISTRATION( NetworkPacketTest );
@@ -187,4 +189,8 @@ void NetworkPacketTest::testReadWriteString() {
 
     CPPUNIT_ASSERT_EQUAL(a, c);
     CPPUNIT_ASSERT_EQUAL(b, d);
+}
+
+void NetworkPacketTest::testOpcode() {
+    CPPUNIT_ASSERT_EQUAL(keepAlive.opcode(), opcode_t::KEEP_ALIVE);
 }
