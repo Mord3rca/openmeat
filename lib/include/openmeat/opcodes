@@ -9,7 +9,7 @@
 
 namespace Openmeat::Network
 {
-    enum class opcode: uint16_t
+    enum class opcode_t: uint16_t
     {
         DISCONNECT  = 0x1a32,
 
@@ -32,8 +32,8 @@ namespace Openmeat::Network
         ERROR = 0xffff
     };
 
-    bool operator==(uint16_t const &a, opcode const &b);
-    bool operator!=(uint16_t const &a, opcode const &b);
+    bool operator==(uint16_t const &a, opcode_t const &b);
+    bool operator!=(uint16_t const &a, opcode_t const &b);
 
     enum class TRAVEL_DEST
     {

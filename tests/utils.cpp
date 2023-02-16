@@ -16,7 +16,7 @@ CPPUNIT_TEST_SUITE_REGISTRATION( NetworkUtilsTest );
 using namespace Openmeat::Network;
 
 void NetworkUtilsTest::testOpcodeComparison() {
-    opcode disconnect = opcode::DISCONNECT;
+    opcode_t disconnect = opcode_t::DISCONNECT;
     uint16_t op = 0x1a32;
     uint16_t op2 = 0x1a1a;
 
