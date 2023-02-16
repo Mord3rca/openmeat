@@ -40,6 +40,11 @@ void Packet::reserve(Packet::size_type len) {
     std::vector<unsigned char>::reserve(len);
 }
 
+opcode_t Packet::opcode() const {
+    uint16_t op;
+    readAt(0, op);
+    return opcode_t(op);
+}
 
 template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
     if( pos + sizeof(T) > size() )

@@ -7,6 +7,8 @@
 #include <ostream>
 #include <initializer_list>
 
+#include "openmeat/opcodes"
+
 namespace Openmeat::Network
 {
     const size_t MINIMAL_PACKET_SIZE=2;
@@ -18,6 +20,8 @@ namespace Openmeat::Network
         Packet(std::initializer_list<unsigned char>);
 
         void reserve(Packet::size_type);
+
+        opcode_t opcode() const;
 
         // Methods for reading
         template<class T> void readAt(Packet::size_type, T&) const;

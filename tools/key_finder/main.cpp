@@ -26,14 +26,12 @@ class Parser : public Socket {
 
     protected:
         void onPacketReceived(Packet*& p) override {
-            uint16_t opcode;
             // number is right after the comunity command
             // which is a uint16_t so we offset the position
             auto pos = sequence() + 2;
             const unsigned char *data = p->data();
 
-            p->readAt(0, opcode);
-            if(opcode != opcode::COMMUNITY)
+            if(p->opcode() != opcode_t::COMMUNITY)
                 goto end;
             seq.s++;
 
