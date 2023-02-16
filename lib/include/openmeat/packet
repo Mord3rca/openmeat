@@ -20,7 +20,7 @@ namespace Openmeat::Network
         void reserve(Packet::size_type);
 
         // Methods for reading
-        template<class T> void readAt(Packet::size_type, T&);
+        template<class T> void readAt(Packet::size_type, T&) const;
 
         // Methods for writting
         template<class T> void writeAt(Packet::size_type, T const &);
