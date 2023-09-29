@@ -62,8 +62,8 @@ void NetworkPacketTest::testOverflow() {
     uint32_t data = 0x00;
 
     s.reserve(8);
-    s.writeAt(0, data); // This is fine
-    s.writeAt(8, data); // But not this one
+    s.writeAt(0, data);  // This is fine
+    s.writeAt(8, data);  // But not this one
 }
 
 void NetworkPacketTest::testStringOverflow() {
