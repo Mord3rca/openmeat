@@ -157,7 +157,7 @@ size_t Socket::_encodeLength(const size_t len, unsigned char* data) const {
         data[c] = (l & 0x7f);
         l >>= 7;
 
-        if (l==0) break;
+        if (l == 0) break;
 
         data[c++] |= 0x80;
     } while (true);
