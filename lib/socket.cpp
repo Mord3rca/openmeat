@@ -1,5 +1,4 @@
-extern "C"
-{
+extern "C" {
     #include <sys/types.h>
     #include <sys/socket.h>
 
@@ -128,8 +127,7 @@ size_t Socket::_decodeLength(const unsigned char*& data, size_t len) {
     size_t c = 0;
     size_t r = 0;
 
-    do
-    {
+    do {
         if (c > 4)
             throw std::out_of_range("Socket len error, too much bytes read.");
 
@@ -167,7 +165,7 @@ size_t Socket::_encodeLength(const size_t len, unsigned char* data) const {
     return c + 1;
 }
 
-void Socket::onPacketReceived(Packet*& p){
+void Socket::onPacketReceived(Packet*& p) {
             __packets.push(p);
 }
 
