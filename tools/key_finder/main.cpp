@@ -31,11 +31,11 @@ class Parser : public Socket {
             auto pos = sequence() + 2;
             const unsigned char *data = p->data();
 
-            if(p->opcode() != opcode_t::COMMUNITY)
+            if (p->opcode() != opcode_t::COMMUNITY)
                 goto end;
             seq.s++;
 
-            for(auto i = 0; i < 4; i++) {
+            for (auto i = 0; i < 4; i++) {
                 key[(pos+i) % KEYLEN] = data[4+i] ^ seq.b[3-i];
             }
 
@@ -47,7 +47,7 @@ class Parser : public Socket {
 void print_key() {
     std::cout << "unsigned char key[" << KEYLEN << "] = { "
         << std::setfill('0') << std::setw(2) << std::hex;
-    for(auto i = 0; i < KEYLEN; i++)
+    for (auto i = 0; i < KEYLEN; i++)
         std::cout << "0x" << (ushort)key[i] << ", ";
     std::cout << "};" << std::endl;
 }
@@ -56,16 +56,16 @@ int main(int argc, char *argv[]) {
     std::ifstream file;
     Parser parser(Socket::TYPE::Server);
 
-    if(argc != 2) {
+    if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <file>" << std::endl;
         return 1;
     }
 
     file.open(argv[1], std::ifstream::in | std::ifstream::binary);
-    while(file.good()) {
+    while (file.good()) {
         auto len = file.readsome(reinterpret_cast<char*>(buffer), BUFFER_SIZE);
 
-        if(len == 0)
+        if (len == 0)
             break;
 
         parser.read(buffer, len);
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
 
     std::cout << "Found " << seq.s << " community packets (more mean better accuracy)" << std::endl;
     // Yeah ... not precise enough. Looking for 0x00 in key should be better.
-    if(seq.s > 20) {
+    if (seq.s > 20) {
         std::cout << "Printing key: " << std::endl;
         print_key();
     } else

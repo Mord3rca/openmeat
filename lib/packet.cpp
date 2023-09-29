@@ -34,7 +34,7 @@ Packet::Packet() : std::vector<unsigned char>() {}
 Packet::Packet(std::initializer_list<unsigned char> l) : std::vector<unsigned char>(l) {}
 
 void Packet::reserve(Packet::size_type len) {
-    if( len < MINIMAL_PACKET_SIZE )
+    if (len < MINIMAL_PACKET_SIZE)
         throw std::invalid_argument("Invalid packet size");
 
     std::vector<unsigned char>::reserve(len);
@@ -47,7 +47,7 @@ opcode_t Packet::opcode() const {
 }
 
 template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
-    if( pos + sizeof(T) > size() )
+    if (pos + sizeof(T) > size())
         throw std::out_of_range("Packet: Not enough data to read");
 
     union {
@@ -56,7 +56,7 @@ template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
     } u;
 
     #if __BYTE_ORDER == __LITTLE_ENDIAN
-    for(size_t i = sizeof(T)-1;;i--)
+    for (size_t i = sizeof(T)-1;;i--)
     {
         u.c[i] = data()[pos++];
         if (i==0) break;
@@ -74,18 +74,18 @@ template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &
     uint16_t len;
     readAt<uint16_t>(pos, len);
 
-    if(pos + sizeof(uint16_t) + len > size())
+    if (pos + sizeof(uint16_t) + len > size())
         throw std::out_of_range("Not enough data left to read string");
 
     str = std::string(reinterpret_cast<const char*>(data() + pos + sizeof(uint16_t)), len);
 }
 
-template<class T> void Packet::writeAt( Packet::size_type pos, T const &e) {
-    if( pos + sizeof(T) > capacity() )
+template<class T> void Packet::writeAt(Packet::size_type pos, T const &e) {
+    if (pos + sizeof(T) > capacity())
         throw std::out_of_range("Packet: Not enough space for write operation.");
 
     // Fill first bytes if not existing
-    while(size() < pos) {
+    while (size() < pos) {
         push_back(0);
     }
 
@@ -95,9 +95,9 @@ template<class T> void Packet::writeAt( Packet::size_type pos, T const &e) {
     } u; u.e = e;
 
     #if __BYTE_ORDER == __LITTLE_ENDIAN
-    for(size_t i = sizeof(T)-1;; i--) {
+    for (size_t i = sizeof(T)-1;; i--) {
         writeAt(pos++, &u.c[i], 1);
-        if(i == 0) break;
+        if (i == 0) break;
     }
     #elif __BYTE_ORDER == __BIG_ENDIAN
     #error "Not implemented yet"
@@ -109,15 +109,15 @@ template<class T> void Packet::writeAt( Packet::size_type pos, T const &e) {
 void Packet::writeAt(Packet::size_type pos, const unsigned char* s, const size_t len) {
     auto blen = pos + len;
 
-    if( capacity() < blen )
+    if (capacity() < blen)
         throw std::out_of_range("Packet: Not enough space for write operation.");
 
-    while(size() < pos) {
+    while (size() < pos) {
         push_back(0);
     }
 
-    for(auto i = 0; i < len; i++) {
-        if(pos + i < size())
+    for (auto i = 0; i < len; i++) {
+        if (pos + i < size())
             data()[pos+i] = s[i];
         else
             push_back(s[i]);
@@ -126,7 +126,7 @@ void Packet::writeAt(Packet::size_type pos, const unsigned char* s, const size_t
 
 template<> void Packet::writeAt<std::string>(Packet::size_type pos, std::string const &e) {
     auto len = e.length();
-    if( len > USHRT_MAX )
+    if (len > USHRT_MAX)
         throw std::out_of_range("Could not write string, size exceed 65535");
 
     writeAt<uint16_t>(pos, len);

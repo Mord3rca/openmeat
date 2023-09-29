@@ -22,13 +22,13 @@ public:
     void testReadString();
     void testReadUint16_t();
     void testReadUint32_t();
-    void testReadUnsignedChar();
 
+    void testReadUnsignedChar();
     void testReadTooMuch();
     void testSeekingTooMuch();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( NetworkPacketReaderTest );
+CPPUNIT_TEST_SUITE_REGISTRATION(NetworkPacketReaderTest);
 
 using namespace Openmeat::Network;
 

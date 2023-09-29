@@ -23,7 +23,7 @@ void PacketWriter::seek(const Packet::size_type s) noexcept {
 }
 
 template<class T> PacketWriter& PacketWriter::operator<<(T const &e) {
-    if(!__p)
+    if (!__p)
         throw std::runtime_error("Pointer not set");
 
     __p->writeAt(__s, e);
@@ -33,7 +33,7 @@ template<class T> PacketWriter& PacketWriter::operator<<(T const &e) {
 }
 
 template<> PacketWriter& PacketWriter::operator<<<std::string>(std::string const &e) {
-    if(!__p)
+    if (!__p)
         throw std::runtime_error("Pointer not set");
 
     __p->writeAt(__s, e);
