@@ -1,0 +1,21 @@
+name: Builder
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install APT dependencies
+      run: |
+        sudo apt update
+        sudo apt install libcppunit-dev
+    - name: Building & running tests
+      run: |
+        ./tests.sh
