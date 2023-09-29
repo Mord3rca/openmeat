@@ -101,13 +101,13 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     if (!_init)
         hook_init();
 
-    if (! addr->sa_family == AF_INET)
+    if (!addr->sa_family == AF_INET)
         return real_connect(sockfd, addr, addrlen);
 
     addr_in = (const struct sockaddr_in *)addr;
 
     // Checking if trying to connect to DM server or not
-    if (! is_hooking_required(addr_in)) {
+    if (!is_hooking_required(addr_in)) {
         hook_info("  -> Not hooking for this one.");
         return real_connect(sockfd, addr, addrlen);
     }

@@ -57,7 +57,7 @@ template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
     #if __BYTE_ORDER == __LITTLE_ENDIAN
     for (size_t i = sizeof(T)-1;; i--) {
         u.c[i] = data()[pos++];
-        if (i==0) break;
+        if (i == 0) break;
     }
     #elif __BYTE_ORDER == __BIG_ENDIAN
     #error "Not implemented yet"
