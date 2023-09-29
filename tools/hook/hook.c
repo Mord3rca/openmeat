@@ -14,7 +14,7 @@ static bool _init = false;
 static bool _verbose = false;
 
 static char *hook_ip = "127.0.0.1";
-static unsigned short hook_port = 4444;
+static uint16_t hook_port = 4444;
 
 static int (*real_connect)(int, const struct sockaddr*, socklen_t) = NULL;
 
