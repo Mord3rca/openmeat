@@ -183,4 +183,4 @@ namespace Openmeat::Network {
         s.write(p);
         return s;
     }
-}
+}  // namespace Openmeat::Network
