@@ -13,7 +13,7 @@ class NetworkPacketWriterTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testWriteUnsignedChar);
     CPPUNIT_TEST_SUITE_END();
 
-public:
+ public:
     void testSeek();
     void testWriteFloat();
     void testWriteDouble();

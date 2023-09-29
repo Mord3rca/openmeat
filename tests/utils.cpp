@@ -7,7 +7,7 @@ class NetworkUtilsTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testOpcodeComparison);
     CPPUNIT_TEST_SUITE_END();
 
-public:
+ public:
     void testOpcodeComparison();
 };
 

@@ -19,8 +19,8 @@ Packet::size_type PacketReader::seek() const noexcept {
 }
 
 void PacketReader::seek(const Packet::size_type s) {
-   if (s > __p->size())
-       throw std::out_of_range("Seek cannot exceed size()");
+    if (s > __p->size())
+        throw std::out_of_range("Seek cannot exceed size()");
 
     __s = s;
 }
@@ -42,5 +42,5 @@ template<> PacketReader& PacketReader::operator>><std::string>(std::string &e) {
     __p->readAt(__s, e);
     __s += e.length() + sizeof(uint16_t);
 
-   return *this;
+    return *this;
 }
