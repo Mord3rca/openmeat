@@ -22,7 +22,7 @@ static union sequence {
 
 class Parser : public Socket {
  public:
-    Parser(Socket::TYPE t) : Socket(t) {}
+    explicit Parser(Socket::TYPE t) : Socket(t) {}
 
  protected:
     void onPacketReceived(Packet*& p) override {
