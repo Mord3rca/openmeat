@@ -6,7 +6,6 @@ add_library(${PROJECT_NAME} SHARED)
 add_compile_options(
     -Wall
     -03
-    -D_GNU_SOURCE
     $<$<CONFIG:DEBUG>:-g>
 )
 
