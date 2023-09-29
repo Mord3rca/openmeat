@@ -1,7 +1,3 @@
-#include "openmeat/socket"
-
-#include <cstring>
-
 extern "C"
 {
     #include <sys/types.h>
@@ -9,6 +5,10 @@ extern "C"
 
     #include <unistd.h>
 }
+
+#include <cstring>
+
+#include "openmeat/socket"
 
 using namespace Openmeat::Network;
 

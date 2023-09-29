@@ -1,14 +1,14 @@
-#include "openmeat/packet"
+extern "C"
+{
+    #include <bits/endian.h>
+}
 
 #include <cstring>
 #include <climits>
 #include <iomanip>
 #include <stdexcept>
 
-extern "C"
-{
-    #include <bits/endian.h>
-}
+#include "openmeat/packet"
 
 using namespace Openmeat::Network;
 
