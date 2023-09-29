@@ -68,7 +68,7 @@ template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
     out = u.e;
 }
 
-template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &str) const {
+template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &str) const {  // NOLINT
     uint16_t len;
     readAt<uint16_t>(pos, len);
 

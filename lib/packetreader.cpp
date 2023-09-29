@@ -35,7 +35,7 @@ template<class T> PacketReader& PacketReader::operator>>(T &e) {
     return *this;
 }
 
-template<> PacketReader& PacketReader::operator>><std::string>(std::string &e) {
+template<> PacketReader& PacketReader::operator>><std::string>(std::string &e) {  // NOLINT
     if (!__p)
         throw std::runtime_error("Pointer not set");
 
