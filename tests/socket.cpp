@@ -19,7 +19,7 @@ public:
     void testMultipleRead();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( NetworkSocketTest );
+CPPUNIT_TEST_SUITE_REGISTRATION(NetworkSocketTest);
 
 using namespace Openmeat::Network;
 
@@ -115,7 +115,7 @@ void NetworkSocketTest::testMultipleRead() {
     };
     s.read(data, sizeof(data));
 
-    for(int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         s >> p;
         CPPUNIT_ASSERT(*p == keepAlive);
         delete p;

@@ -23,7 +23,7 @@ public:
     void testWriteUnsignedChar();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( NetworkPacketWriterTest );
+CPPUNIT_TEST_SUITE_REGISTRATION(NetworkPacketWriterTest);
 
 using namespace Openmeat::Network;
 

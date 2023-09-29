@@ -19,14 +19,14 @@ Packet::size_type PacketReader::seek() const noexcept {
 }
 
 void PacketReader::seek(const Packet::size_type s) {
-   if(s > __p->size())
+   if (s > __p->size())
        throw std::out_of_range("Seek cannot exceed size()");
 
     __s = s;
 }
 
 template<class T> PacketReader& PacketReader::operator>>(T &e) {
-    if(!__p)
+    if (!__p)
         throw std::runtime_error("Pointer not set");
 
     __p->readAt(__s, e);
@@ -36,7 +36,7 @@ template<class T> PacketReader& PacketReader::operator>>(T &e) {
 }
 
 template<> PacketReader& PacketReader::operator>><std::string>(std::string &e) {
-    if(!__p)
+    if (!__p)
         throw std::runtime_error("Pointer not set");
 
     __p->readAt(__s, e);

@@ -11,7 +11,7 @@ public:
     void testOpcodeComparison();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( NetworkUtilsTest );
+CPPUNIT_TEST_SUITE_REGISTRATION(NetworkUtilsTest);
 
 using namespace Openmeat::Network;
 

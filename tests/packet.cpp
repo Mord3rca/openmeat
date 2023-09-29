@@ -34,7 +34,7 @@ public:
     void testOpcode();
 };
 
-CPPUNIT_TEST_SUITE_REGISTRATION( NetworkPacketTest );
+CPPUNIT_TEST_SUITE_REGISTRATION(NetworkPacketTest);
 
 using namespace Openmeat::Network;
 
@@ -51,7 +51,7 @@ void NetworkPacketTest::testInitializerList() {
     Packet s(v); auto data = s.data();
 
     CPPUNIT_ASSERT(s.size() == v.size());
-    for(auto const &i : v) {
+    for (auto const &i : v) {
         CPPUNIT_ASSERT(*data == i);
         data++;
     }
@@ -77,8 +77,7 @@ void NetworkPacketTest::testStringOverflow() {
 
 void NetworkPacketTest::testResizeUp() {
     std::initializer_list<unsigned char> const expected(
-        {0x77, 0x88, 0x11, 0x22, 0x33, 0x44}
-    );
+        {0x77, 0x88, 0x11, 0x22, 0x33, 0x44});
     Packet s({0x77, 0x88});
     uint32_t data = 0x11223344;
 
@@ -89,7 +88,7 @@ void NetworkPacketTest::testResizeUp() {
 
     auto d = s.data();
     CPPUNIT_ASSERT(s.size() == expected.size());
-    for(auto const& i : expected) {
+    for (auto const& i : expected) {
         CPPUNIT_ASSERT(i == *d);
         d++;
     }

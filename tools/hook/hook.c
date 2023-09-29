@@ -22,7 +22,7 @@ static void hook_info(const char *fmt, ...)
 {
     va_list ap;
 
-    if(!_verbose)
+    if (!_verbose)
         return;
 
     va_start(ap, fmt);
@@ -38,11 +38,11 @@ static void hook_init()
     real_connect = dlsym(RTLD_NEXT, "connect");
 
     v = getenv("HOOK_ADDR");
-    if(v)
+    if (v)
         hook_ip = v;
 
     v = getenv("HOOK_PORT");
-    if(v)
+    if (v)
         hook_port = atoi(v);
 
     _verbose = getenv("HOOK_VERBOSE") != NULL;
@@ -53,7 +53,7 @@ static void hook_init()
     _init = true;
 }
 
-static bool is_hooking_required( const struct sockaddr_in *addr )
+static bool is_hooking_required(const struct sockaddr_in *addr)
 {
     in_port_t port;
 
@@ -75,7 +75,7 @@ static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen
         newaddr.sin_addr.s_addr     = inet_addr(hook_ip);
         newaddr.sin_family          = AF_INET;
 
-    if( real_connect(sockfd, (const struct sockaddr*)&newaddr, sizeof( newaddr )) != 0) {
+    if (real_connect(sockfd, (const struct sockaddr*)&newaddr, sizeof( newaddr )) != 0) {
         hook_info("  -> could not connect to SOCKS proxy (%s:%u)",
                   hook_ip, hook_port);
         return false;
@@ -103,16 +103,16 @@ int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 {
     const struct sockaddr_in *addr_in = NULL;
 
-    if(!_init)
+    if (!_init)
         hook_init();
 
-    if( ! addr->sa_family == AF_INET )
+    if (! addr->sa_family == AF_INET)
         return real_connect(sockfd, addr, addrlen);
 
     addr_in = (const struct sockaddr_in *)addr;
 
     // Checking if trying to connect to DM server or not
-    if( ! is_hooking_required(addr_in) ) {
+    if (! is_hooking_required(addr_in)) {
         hook_info("  -> Not hooking for this one.");
         return real_connect(sockfd, addr, addrlen);
     }

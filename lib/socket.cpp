@@ -21,13 +21,13 @@ Socket::Socket(int fd, TYPE type) : Socket(type) {
 }
 
 Socket::~Socket() {
-    if(__sock != -1) close(__sock);
+    if (__sock != -1) close(__sock);
 
-    if(__in_buff) delete[] __in_buff;
+    if (__in_buff) delete[] __in_buff;
 
-    if(__packet) delete __packet;
+    if (__packet) delete __packet;
 
-    while(!__packets.empty()) {
+    while (!__packets.empty()) {
         auto p = __packets.front();
         __packets.pop();
         delete p;
@@ -51,7 +51,7 @@ unsigned char Socket::sequence() const noexcept {
 bool Socket::connect(const struct sockaddr_in& addr) {
     __sock = socket(AF_INET, SOCK_STREAM, 0);
 
-    if( ::connect(__sock, (const struct sockaddr*)&addr, sizeof(addr)) == -1 ) {
+    if (::connect(__sock, (const struct sockaddr*)&addr, sizeof(addr)) == -1) {
         __sock = -1;
         return false;
     }
@@ -69,7 +69,7 @@ bool Socket::connect(const std::string& ip, const unsigned short port) {
 }
 
 void Socket::read() {
-    if(!__in_buff) __in_buff = new unsigned char[IN_BUFF_LEN];
+    if (!__in_buff) __in_buff = new unsigned char[IN_BUFF_LEN];
     ssize_t len = recv(__sock, __in_buff, IN_BUFF_LEN, 0);
 
     read(__in_buff, len);
@@ -81,8 +81,8 @@ void Socket::read(const unsigned char *data, const size_t len) {
 
     size_t data_remaining;
 
-    while(first < last) {
-        if(!__packet) {
+    while (first < last) {
+        if (!__packet) {
             __plen = _decodeLength(first, (last - first));
             __packet = new Packet;
             __packet->reserve(__plen);
@@ -94,7 +94,7 @@ void Socket::read(const unsigned char *data, const size_t len) {
         __packet->writeAt(__packet->size(), first, data_remaining);
         first += data_remaining;
 
-        if(__packet->size() == __plen) {
+        if (__packet->size() == __plen) {
             onPacketReceived(__packet);
             __packet = nullptr;
         }
@@ -107,9 +107,9 @@ void Socket::write(const Packet& p) {
     size_t hlen = _encodeLength(plen, d);
 
 
-    if( __type == TYPE::Client ) {
+    if (__type == TYPE::Client) {
         d[hlen++] = __sequence++;
-        if(__sequence > SEQUENCE_MAX)
+        if (__sequence > SEQUENCE_MAX)
             __sequence = SEQUENCE_MIN;
     }
 
@@ -118,7 +118,7 @@ void Socket::write(const Packet& p) {
 }
 
 void Socket::write(const unsigned char* data, const size_t len, int flags) const {
-    if(__sock == -1)
+    if (__sock == -1)
         std::runtime_error("Socket is not connected");
 
     ::send(__sock, data, len, flags);
@@ -130,19 +130,19 @@ size_t Socket::_decodeLength(const unsigned char*& data, size_t len) {
 
     do
     {
-        if(c > 4)
+        if (c > 4)
             throw std::out_of_range("Socket len error, too much bytes read.");
 
-        if(c > len)
+        if (c > len)
             throw std::out_of_range("Not enough data to decode len");
 
         r += (data[c] & 0x7f) << 7*c;
-    } while(data[c++] & 0x80);
+    } while (data[c++] & 0x80);
 
     data += c;
 
     // Skipping sequence from Client. Unchecked for now.
-    if(__type == TYPE::Server)
+    if (__type == TYPE::Server)
         __sequence = *(data++);
 
     return r;
@@ -153,16 +153,16 @@ size_t Socket::_encodeLength(const size_t len, unsigned char* data) const {
     size_t l = len;
 
     do {
-        if(c > 4)
+        if (c > 4)
             throw std::out_of_range("Socket encode length error");
 
         data[c] = (l & 0x7f);
         l >>= 7;
 
-        if(l==0) break;
+        if (l==0) break;
 
         data[c++] |= 0x80;
-    } while( true );
+    } while (true);
 
     return c + 1;
 }
@@ -173,7 +173,7 @@ void Socket::onPacketReceived(Packet*& p){
 
 namespace Openmeat::Network {
     Socket& operator >>(Socket& s, Packet*& p) {
-        if(s.__packets.size() == 0)
+        if (s.__packets.size() == 0)
             throw std::out_of_range("No packet available");
 
         p = s.__packets.front();
