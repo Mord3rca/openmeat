@@ -77,8 +77,9 @@ int main(int argc, char *argv[]) {
     if (seq.s > 20) {
         std::cout << "Printing key: " << std::endl;
         print_key();
-    } else
+    } else {
         std::cout << "Not enough community packets" << std::endl;
+    }
 
     return 0;
 }
