@@ -21,27 +21,27 @@ static union sequence {
 } seq;
 
 class Parser : public Socket {
-    public:
-        Parser(Socket::TYPE t) : Socket(t) {}
+ public:
+    Parser(Socket::TYPE t) : Socket(t) {}
 
-    protected:
-        void onPacketReceived(Packet*& p) override {
-            // number is right after the comunity command
-            // which is a uint16_t so we offset the position
-            auto pos = sequence() + 2;
-            const unsigned char *data = p->data();
+ protected:
+    void onPacketReceived(Packet*& p) override {
+        // number is right after the comunity command
+        // which is a uint16_t so we offset the position
+        auto pos = sequence() + 2;
+        const unsigned char *data = p->data();
 
-            if (p->opcode() != opcode_t::COMMUNITY)
-                goto end;
-            seq.s++;
+        if (p->opcode() != opcode_t::COMMUNITY)
+            goto end;
+        seq.s++;
 
-            for (auto i = 0; i < 4; i++) {
-                key[(pos+i) % KEYLEN] = data[4+i] ^ seq.b[3-i];
-            }
-
-        end:
-            delete p;
+        for (auto i = 0; i < 4; i++) {
+            key[(pos+i) % KEYLEN] = data[4+i] ^ seq.b[3-i];
         }
+
+    end:
+        delete p;
+    }
 };
 
 void print_key() {

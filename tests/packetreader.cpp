@@ -15,7 +15,7 @@ class NetworkPacketReaderTest : public CppUnit::TestFixture {
     CPPUNIT_TEST_EXCEPTION(testSeekingTooMuch, std::out_of_range);
     CPPUNIT_TEST_SUITE_END();
 
-public:
+ public:
     void testSeek();
     void testReadFloat();
     void testReadDouble();

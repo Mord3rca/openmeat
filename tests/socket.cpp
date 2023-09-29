@@ -11,7 +11,7 @@ class NetworkSocketTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testMultipleRead);
     CPPUNIT_TEST_SUITE_END();
 
-public:
+ public:
     void testReadClientPacket();
     void testReadServerPacket();
     void testLongRead();

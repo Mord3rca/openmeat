@@ -18,7 +18,7 @@ class NetworkPacketTest : public CppUnit::TestFixture {
     CPPUNIT_TEST(testOpcode);
     CPPUNIT_TEST_SUITE_END();
 
-public:
+ public:
     void testConstKeepAlive();
     void testInitializerList();
     void testOverflow();

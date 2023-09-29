@@ -39,5 +39,5 @@ template<> PacketWriter& PacketWriter::operator<<<std::string>(std::string const
     __p->writeAt(__s, e);
     __s += e.length() + sizeof(uint16_t);
 
-   return *this;
+    return *this;
 }
