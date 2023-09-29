@@ -18,8 +18,7 @@ static unsigned short hook_port = 4444;
 
 static int (*real_connect)(int, const struct sockaddr*, socklen_t) = NULL;
 
-static void hook_info(const char *fmt, ...)
-{
+static void hook_info(const char *fmt, ...) {
     va_list ap;
 
     if (!_verbose)
@@ -32,8 +31,7 @@ static void hook_info(const char *fmt, ...)
     va_end(ap);
 }
 
-static void hook_init()
-{
+static void hook_init() {
     char *v;
     real_connect = dlsym(RTLD_NEXT, "connect");
 
@@ -53,8 +51,7 @@ static void hook_init()
     _init = true;
 }
 
-static bool is_hooking_required(const struct sockaddr_in *addr)
-{
+static bool is_hooking_required(const struct sockaddr_in *addr) {
     in_port_t port;
 
     port = ntohs(addr->sin_port);
@@ -65,8 +62,7 @@ static bool is_hooking_required(const struct sockaddr_in *addr)
     return port % 1000 == 801;
 }
 
-static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
-{
+static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     unsigned char socks4req[8] = {0};
     const struct sockaddr_in* addr_in = (const struct sockaddr_in*)addr;
     // Connect to localhost SOCKS4 Proxy
@@ -99,8 +95,7 @@ static bool SOCKS4neg(int sockfd, const struct sockaddr *addr, socklen_t addrlen
 }
 
 // Function to hook
-int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
-{
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen) {
     const struct sockaddr_in *addr_in = NULL;
 
     if (!_init)

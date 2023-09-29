@@ -1,5 +1,4 @@
-extern "C"
-{
+extern "C" {
     #include <bits/endian.h>
 }
 
@@ -56,8 +55,7 @@ template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
     } u;
 
     #if __BYTE_ORDER == __LITTLE_ENDIAN
-    for (size_t i = sizeof(T)-1;;i--)
-    {
+    for (size_t i = sizeof(T)-1;;i--) {
         u.c[i] = data()[pos++];
         if (i==0) break;
     }
