@@ -3,6 +3,8 @@
 #ifndef OM_OPCODES_HEADER
 #define OM_OPCODES_HEADER
 
+#include <cstdint>
+
 /*
  * Lots of stuff here ! Have fun reading.
  */
