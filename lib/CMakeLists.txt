@@ -9,6 +9,8 @@ target_compile_options(
     $<$<CONFIG:DEBUG>:-g>
 )
 
+configure_file(openmeat.pc.in lib/pkgconfig/openmeat.pc @ONLY)
+
 target_include_directories(${PROJECT_NAME} PUBLIC include/)
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 
