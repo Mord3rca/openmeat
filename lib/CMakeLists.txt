@@ -9,7 +9,7 @@ target_compile_options(
     $<$<CONFIG:DEBUG>:-g>
 )
 
-configure_file(openmeat.pc.in lib/pkgconfig/openmeat.pc @ONLY)
+configure_file(openmeat.pc.in pkgconfig/openmeat.pc @ONLY)
 
 target_include_directories(${PROJECT_NAME} PUBLIC include/)
 set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
@@ -23,3 +23,4 @@ target_sources(
 )
 
 install(TARGETS ${PROJECT_NAME} LIBRARY FILE_SET HEADERS)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/pkgconfig/openmeat.pc DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/pkgconfig)
