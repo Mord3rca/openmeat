@@ -3,9 +3,9 @@ FILE(GLOB includes include/${PROJECT_NAME}/*)
 
 add_library(${PROJECT_NAME} SHARED)
 
-add_compile_options(
+target_compile_options(
+    ${PROJECT_NAME} BEFORE PRIVATE
     -Wall
-    -03
     $<$<CONFIG:DEBUG>:-g>
 )
 
