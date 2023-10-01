@@ -114,7 +114,7 @@ void Packet::writeAt(Packet::size_type pos, const unsigned char* s, const size_t
         push_back(0);
     }
 
-    for (auto i = 0; i < len; i++) {
+    for (size_t i = 0; i < len; i++) {
         if (pos + i < size())
             data()[pos+i] = s[i];
         else
