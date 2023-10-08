@@ -15,7 +15,7 @@ jobs:
     - name: Install APT dependencies
       run: |
         sudo apt update
-        sudo apt install libcppunit-dev
+        sudo apt install libcppunit-dev wireshark-common wireshark-dev
     - name: Building & running tests
       run: |
         ./tests.sh
