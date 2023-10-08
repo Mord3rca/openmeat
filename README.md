@@ -21,4 +21,5 @@ Some options can be set with `-D`:
 | name | default | comment |
 |------|---------|---------|
 | `CMAKE_BUILD_TYPE` | Release | see [this](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html) for more info |
+| `BUILD_DISSECTOR` | On | Build Wireshark dissector |
 | `BUILD_TESTS` | Off | Build CppUnit tests |
