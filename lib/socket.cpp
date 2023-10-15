@@ -166,7 +166,7 @@ size_t Socket::_encodeLength(const size_t len, unsigned char* data) const {
 }
 
 void Socket::onPacketReceived(Packet*& p) {
-            __packets.push(p);
+    __packets.push(p);
 }
 
 namespace Openmeat::Network {
