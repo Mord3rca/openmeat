@@ -21,7 +21,7 @@ static const value_string opcode_names[] = {
 
 static hf_register_info hf[] = {
     { &hf_deadmaze_length, {
-        "Length", "deadmaze.length", FT_NONE, BASE_NONE,
+        "Length", "deadmaze.length", FT_UINT16, BASE_DEC,
         NULL, 0x0, "Packet length", HFILL
     }},
     { &hf_deadmaze_opcode, {
@@ -110,8 +110,7 @@ static int dissect_deadmaze(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
         proto_item *item = proto_tree_add_item(tree, proto_deadmaze, tvb, 0, -1, ENC_NA);
         proto_tree *deadmaze_tree = proto_item_add_subtree(item, ett_deadmaze);
 
-        proto_tree_add_none_format(deadmaze_tree, hf_deadmaze_length, tvb, offset,
-                                   (offset - offset_start), "Length: %i", size);
+        proto_tree_add_uint(deadmaze_tree, hf_deadmaze_length, tvb, offset_start, (offset - offset_start), size);
         dissect_deadmaze_packet(tvb, pinfo, deadmaze_tree, &offset, size);
     }
 
