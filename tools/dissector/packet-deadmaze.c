@@ -67,7 +67,7 @@ static bool read_varint(guint32 *result, tvbuff_t *tvb, guint *offset) {
 
 static bool is_to_server(const packet_info *pinfo) {
     int s = pinfo->destport / 1000;
-    return pinfo->destport % 1000 == 801 && s >=11 && s <=13;
+    return pinfo->destport % 1000 == 801 && s >=11 && s <=14;
 }
 
 static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint *offset, guint32 size) {
@@ -132,6 +132,7 @@ void proto_reg_handoff_deadmaze(void) {
     dissector_add_uint("tcp.port", 11801, deadmaze_handle);
     dissector_add_uint("tcp.port", 12801, deadmaze_handle);
     dissector_add_uint("tcp.port", 13801, deadmaze_handle);
+    dissector_add_uint("tcp.port", 14801, deadmaze_handle);
 }
 
 void plugin_register(void) {
