@@ -67,7 +67,7 @@ static bool read_varint(guint32 *result, tvbuff_t *tvb, guint *offset) {
 
 static bool is_to_server(const packet_info *pinfo) {
     int s = pinfo->destport / 1000;
-    return pinfo->destport % 1000 == 801 && s >=11 && s <=13;
+    return pinfo->destport % 1000 == 801 && s >=11 && s <=14;
 }
 
 static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint *offset, guint32 size) {
