@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 set(GLOBAL_NAME "openmeat")
 set(GLOBAL_VERSION "0.0.1")
@@ -10,6 +10,10 @@ set(BUILD_DISSECTOR ON CACHE BOOL "Build Wireshark Dissector")
 set(BUILD_TESTS OFF CACHE BOOL "Build CppUnit tests")
 
 include(GNUInstallDirs)
+
+find_package(PkgConfig REQUIRED)
+
+include_directories("lib/include")
 
 add_subdirectory("lib/")
 if (${BUILD_TESTS})

@@ -1,15 +1,20 @@
-FILE(GLOB tests_source *.cpp)
+enable_testing()
 
-project(${GLOBAL_NAME}_tests)
+project(${GLOBAL_NAME}tests)
+
+FILE(GLOB tests_source *.cpp)
 
 add_executable(${PROJECT_NAME})
 
-target_link_libraries(${PROJECT_NAME} ${GLOBAL_NAME} cppunit)
+pkg_search_module(CPPUNIT REQUIRED IMPORTED_TARGET cppunit)
+
+target_link_libraries(${PROJECT_NAME} ${GLOBAL_NAME}_shared PkgConfig::CPPUNIT)
 
 add_compile_options(
     -Wall
-    -03
     $<$<CONFIG:DEBUG>:-g>
 )
 
 target_sources(${PROJECT_NAME} PRIVATE ${tests_source})
+
+add_test(NAME ${PROJECT_NAME} COMMAND ./${PROJECT_NAME})
