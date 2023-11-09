@@ -9,8 +9,7 @@ trap 'rm -rf ${WORKDIR}' EXIT
 
 cd "${WORKDIR}"
 
-cmake -DBUILD_TESTS=1 "${OPENMEAT_ROOT}"
+cmake -DBUILD_TESTS=ON "${OPENMEAT_ROOT}"
 make "-j$(nproc)"
 
-./tests/openmeat_tests
-
+ctest -V --test-dir tests/
