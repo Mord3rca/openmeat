@@ -1,0 +1,119 @@
+#!/usr/bin/env python3
+
+# A simple program used to reverse the obfuscation
+# of deadmeat.swf (https://www.deadmaze.com/alpha/deadmeat.swf)
+#
+# Listing assumption:
+#  * All binary files are used
+#  * Only one solution is possible
+#  * The first binary file to use contain SWF the header
+
+from itertools import permutations
+from os import getenv
+from pathlib import Path
+from shutil import copy2
+from subprocess import run
+from tempfile import TemporaryDirectory
+from typing import List, Union
+from urllib.request import urlopen
+import zlib
+
+
+FFDEC_EXE = getenv('FFDEC_EXE', 'ffdec')
+
+
+class BinaryData:
+
+    def __init__(self, path: Path) -> None:
+        self._path = path.absolute()
+        self._data = path.read_bytes()
+
+    @property
+    def path(self) -> Path:
+        return self._path
+
+    @property
+    def data(self) -> bytes:
+        return self._data[8:] if self.isCWSHeaderPresent() else self._data
+
+    def isCWSHeaderPresent(self) -> bool:
+        return self._data[:3] == b'CWS'
+
+    @property
+    def cws(self) -> Union[bytes, None]:
+        return self._data[:8] if self.isCWSHeaderPresent() else None
+
+
+def downloadDeadmazeSWF(dir: Path = Path('.')) -> Path:
+    loader_url = 'https://www.deadmaze.com/alpha/deadmeat.swf'
+    out = dir / 'deadmeat.swf'
+
+    with urlopen(loader_url) as url:
+        if url.status != 200:
+            raise RuntimeError('Nope ! Could not DL SWF app')
+
+        out.write_bytes(url.read())
+
+    return out
+
+
+def extractBinaryData(swf: Path, out_dir: Path = Path('.')) -> None:
+    proc = run([FFDEC_EXE, '-export', 'binarydata', str(out_dir), str(swf)])
+    proc.check_returncode()
+
+
+def getBinariesData(dir: Path = Path('.')) -> List[BinaryData]:
+    return [BinaryData(bin) for bin in dir.glob('**/*.bin')]
+
+
+def getRootBinaryFile(dataFiles: List[BinaryData]) -> BinaryData:
+    for i in dataFiles:
+        if i.isCWSHeaderPresent():
+            return i
+
+    raise RuntimeError('Root binary file was not found')
+
+
+def try_decompressing(dataFiles: List[BinaryData]) -> bool:
+    exception = None
+    content = b''.join([i.data for i in dataFiles])
+
+    try:
+        zlib.decompress(content)
+    except zlib.error as e:
+        exception = e
+        pass
+
+    return not exception
+
+
+# -- WORKER --
+
+bins = None
+head = None
+content = None
+
+# Get SWF archive and read all
+with TemporaryDirectory(prefix='bloader-') as tmp:
+    ptmp = Path(tmp)
+    swf = downloadDeadmazeSWF(ptmp)
+    extractBinaryData(swf, ptmp)
+    bins = getBinariesData(ptmp)
+
+    copy2(swf, swf.name)  # Save archive in current dir
+
+# Find head (except / quit if not possible)
+head = getRootBinaryFile(bins)
+bins.remove(head)
+
+# For now, use permutations to brute force possibilities
+for i in permutations(bins):
+    if try_decompressing([head] + list(i)):
+        content = i
+        break
+else:
+    raise Exception('No solution was found...')
+
+# Write down solution and exit
+output = Path('reversed.swf')
+output.write_bytes(head.cws + head.data + b''.join([i.data for i in content]))
