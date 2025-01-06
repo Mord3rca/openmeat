@@ -8,7 +8,6 @@
 #  * Only one solution is possible
 #  * The first binary file to use contain SWF the header
 
-from itertools import permutations
 from os import getenv
 from pathlib import Path
 from shutil import copy2
@@ -84,7 +83,26 @@ def try_decompressing(dataFiles: List[BinaryData]) -> bool:
         exception = e
         pass
 
-    return not exception
+    return not exception or 'Error -5' in exception.args[0]
+
+
+def findSolution(
+    all: List[BinaryData], curr: List[BinaryData],
+    min_level: int = 1
+) -> Union[List[BinaryData], None]:
+    if not try_decompressing(curr):
+        return None
+
+    if len(curr) > len(all):
+        return curr
+
+    for i in all:
+        if i not in curr:
+            res = findSolution(all, curr + [i])
+            if res:
+                return res
+
+    return None
 
 
 # -- WORKER --
@@ -105,15 +123,11 @@ with TemporaryDirectory(prefix='bloader-') as tmp:
 # Find head (except / quit if not possible)
 head = getRootBinaryFile(bins)
 bins.remove(head)
+content = findSolution(bins, [head])
 
-# For now, use permutations to brute force possibilities
-for i in permutations(bins):
-    if try_decompressing([head] + list(i)):
-        content = i
-        break
-else:
-    raise Exception('No solution was found...')
+if not content:
+    raise RuntimeError('No solution was found')
 
 # Write down solution and exit
 output = Path('reversed.swf')
-output.write_bytes(head.cws + head.data + b''.join([i.data for i in content]))
+output.write_bytes(content[0].cws + b''.join([i.data for i in content]))
