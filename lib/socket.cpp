@@ -75,10 +75,9 @@ void Socket::read() {
 }
 
 void Socket::read(const unsigned char *data, const size_t len) {
+    size_t data_remaining;
     const unsigned char *first = data;
     const unsigned char *last  = first + len;
-
-    size_t data_remaining;
 
     while (first < last) {
         if (!__packet) {
@@ -88,7 +87,7 @@ void Socket::read(const unsigned char *data, const size_t len) {
         }
 
         data_remaining = __plen - __packet->size();
-        data_remaining = (data_remaining > (last - first) ? (last - first) : data_remaining);
+        data_remaining = (data_remaining > (size_t)(last - first) ? (size_t)(last - first) : data_remaining);
 
         __packet->writeAt(__packet->size(), first, data_remaining);
         first += data_remaining;
