@@ -2,6 +2,7 @@
 
 #include <config.h>
 #include <epan/packet.h>
+#include <ws_version.h>
 
 static int proto_deadmaze = -1;
 
@@ -49,10 +50,14 @@ const int plugin_want_minor = VERSION_MINOR;
 static bool read_varint(guint32 *result, tvbuff_t *tvb, guint *offset) {
     guint shift = 0;
     guint32 r = 0;
-    const guint length = tvb_reported_length(tvb);
+    const unsigned int length = tvb_reported_length(tvb);
 
     while (*offset < length && shift <= 35) {
+#if WIRESHARK_VERSION_MAJOR >= 4 && WIRESHARK_VERSION_MINOR >=6
+        const uint8_t b = tvb_get_uint8(tvb, *offset);
+#else
         const guint8 b = tvb_get_guint8(tvb, *offset);
+#endif
         r |= ((b & 0x7f) << shift);
         *offset += 1;
         shift += 7;
