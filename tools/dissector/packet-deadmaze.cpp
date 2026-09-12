@@ -137,7 +137,7 @@ static int dissect_deadmaze(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     return tvb_captured_length(tvb);
 }
 
-extern "C" const gchar plugin_version[] = "0.0.0";
+extern "C" const gchar plugin_version[] = OPENMEAT_VERSION;
 extern "C" const int plugin_want_major = VERSION_MAJOR;
 extern "C" const int plugin_want_minor = VERSION_MINOR;
 
