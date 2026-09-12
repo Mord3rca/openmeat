@@ -6,7 +6,7 @@ get_target_property(epan_includes epan INTERFACE_INCLUDE_DIRECTORIES)
 get_target_property(epan_system_includes epan INTERFACE_SYSTEM_INCLUDE_DIRECTORIES)
 
 add_library(${PROJECT_NAME} SHARED)
-target_sources(${PROJECT_NAME} PRIVATE packet-deadmaze.c)
+target_sources(${PROJECT_NAME} PRIVATE packet-deadmaze.cpp)
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${epan_includes})
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${epan_system_includes})
