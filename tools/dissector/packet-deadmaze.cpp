@@ -3,6 +3,8 @@
 #include <config.h>
 #include <epan/packet.h>
 
+#include "openmeat/opcodes"
+
 static int proto_deadmaze = -1;
 
 static int hf_deadmaze_data = -1;
@@ -12,12 +14,27 @@ static int hf_deadmaze_sequence = -1;
 
 static int ett_deadmaze = -1;
 
+#define OPCODE_TO_VSTRING(val) \
+    {static_cast<uint32_t>(Openmeat::Network::opcode_t::val), #val}
+
 static const value_string opcode_names[] = {
-    {0x1a1a, "Keep Alive"},
-    {0x1a32, "Disconnect"},
-    {0x1c06, "Ping"},
+    OPCODE_TO_VSTRING(DISCONNECT),
+    OPCODE_TO_VSTRING(KEEP_ALIVE),
+    OPCODE_TO_VSTRING(PING),
+    OPCODE_TO_VSTRING(COMMUNITY),
+    OPCODE_TO_VSTRING(MOVE),
+    OPCODE_TO_VSTRING(PERK),
+    OPCODE_TO_VSTRING(USE),
+    OPCODE_TO_VSTRING(ATTACK),
+    OPCODE_TO_VSTRING(USE_OBJECT),
+    OPCODE_TO_VSTRING(SWAP_WEAPON),
+    OPCODE_TO_VSTRING(CRAFT),
+    OPCODE_TO_VSTRING(TRAVEL),
+    OPCODE_TO_VSTRING(PARRY),
     {0, NULL}
 };
+
+#undef OPCODE_TO_VSTRING
 
 static hf_register_info hf[] = {
     { &hf_deadmaze_length, {
@@ -41,10 +58,6 @@ static hf_register_info hf[] = {
 static int *ett[] = {
     &ett_deadmaze
 };
-
-const gchar plugin_version[] = "0.0.0";
-const int plugin_want_major = VERSION_MAJOR;
-const int plugin_want_minor = VERSION_MINOR;
 
 static bool read_varint(guint32 *result, tvbuff_t *tvb, guint *offset) {
     guint shift = 0;
@@ -83,8 +96,10 @@ static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tre
     proto_tree_add_item(tree, hf_deadmaze_opcode, tvb, *offset, 2, ENC_BIG_ENDIAN);
     *offset += 2;
 
-    proto_tree_add_item(tree, hf_deadmaze_data, tvb, *offset, size-2, ENC_BIG_ENDIAN);
-    *offset += size - 2;
+    if ((size - 2) > 0) {
+        proto_tree_add_item(tree, hf_deadmaze_data, tvb, *offset, size-2, ENC_BIG_ENDIAN);
+        *offset += size - 2;
+    }
 }
 
 static int dissect_deadmaze(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_) {
@@ -117,14 +132,18 @@ static int dissect_deadmaze(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
     return tvb_captured_length(tvb);
 }
 
-void proto_register_deadmaze(void) {
+extern "C" const gchar plugin_version[] = "0.0.0";
+extern "C" const int plugin_want_major = VERSION_MAJOR;
+extern "C" const int plugin_want_minor = VERSION_MINOR;
+
+extern "C" void proto_register_deadmaze(void) {
     proto_deadmaze = proto_register_protocol("DeadMaze Protocol", "DeadMaze", "deadmaze");
 
     proto_register_field_array(proto_deadmaze, hf, array_length(hf));
     proto_register_subtree_array(ett, array_length(ett));
 }
 
-void proto_reg_handoff_deadmaze(void) {
+extern "C" void proto_reg_handoff_deadmaze(void) {
     static dissector_handle_t deadmaze_handle;
 
     deadmaze_handle = create_dissector_handle(dissect_deadmaze, proto_deadmaze);
@@ -135,7 +154,7 @@ void proto_reg_handoff_deadmaze(void) {
     dissector_add_uint("tcp.port", 14801, deadmaze_handle);
 }
 
-void plugin_register(void) {
+extern "C" void plugin_register(void) {
     static proto_plugin plug;
 
     plug.register_protoinfo = proto_register_deadmaze;
