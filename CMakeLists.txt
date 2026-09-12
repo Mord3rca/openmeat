@@ -13,6 +13,8 @@ include(GNUInstallDirs)
 
 find_package(PkgConfig REQUIRED)
 
+add_compile_definitions(OPENMEAT_VERSION="${GLOBAL_VERSION}")
+
 include_directories("lib/include")
 
 add_subdirectory("lib/")
