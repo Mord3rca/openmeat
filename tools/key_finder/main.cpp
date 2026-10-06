@@ -1,3 +1,8 @@
+#include <pcap/pcap.h>
+#include <net/ethernet.h>
+#include <netinet/ip.h>
+#include <netinet/tcp.h>
+
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -9,11 +14,7 @@
 using namespace Openmeat::Network;
 
 const ssize_t KEYLEN = 20;
-// Client conversation is expected, packets are small
-const ssize_t BUFFER_SIZE = 512;
-
 static unsigned char key[KEYLEN] = {0};
-static unsigned char buffer[BUFFER_SIZE];
 
 static union sequence {
     uint32_t s = 0;
@@ -23,6 +24,40 @@ static union sequence {
 class Parser : public Socket {
  public:
     explicit Parser(Socket::TYPE t) : Socket(t) {}
+
+    int read_pcap_file(const char *filename) {
+        pcap_t *pcap;
+        size_t dataOffset;
+        struct bpf_program fcode;
+        const unsigned char *data;
+        char errbuf[PCAP_ERRBUF_SIZE];
+        struct pcap_pkthdr *pktheader;
+        const struct tcphdr* tcpHeader;
+
+        pcap = pcap_open_offline(filename, errbuf);
+        if (!pcap) {
+            std::cerr << "pcap_open_offline() failed: " << errbuf << std::endl;
+            return 1;
+        }
+
+        pcap_compile(pcap, &fcode, "tcp", 1, 0xffffff);
+        pcap_setfilter(pcap, &fcode);
+
+        while (pcap_next_ex(pcap, &pktheader, &data) > 0) {
+            // Filter force TCP packet so it's safe
+            tcpHeader = (const struct tcphdr *)(data + sizeof(struct ether_header) + sizeof(struct ip));
+
+            if ((ntohs(tcpHeader->dest) % 1000) != 801)
+                continue;
+
+            dataOffset = sizeof(struct ether_header) + sizeof(struct ip) + (tcpHeader->doff << 2);
+            read(data + dataOffset, pktheader->len - dataOffset);
+        }
+
+        pcap_close(pcap);
+
+        return 0;
+    }
 
  protected:
     void onPacketReceived(Packet*& p) override {
@@ -53,7 +88,7 @@ void print_key() {
 }
 
 int main(int argc, char *argv[]) {
-    std::ifstream file;
+    int err;
     Parser parser(Socket::TYPE::Server);
 
     if (argc != 2) {
@@ -61,16 +96,9 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    file.open(argv[1], std::ifstream::in | std::ifstream::binary);
-    while (file.good()) {
-        auto len = file.readsome(reinterpret_cast<char*>(buffer), BUFFER_SIZE);
-
-        if (len == 0)
-            break;
-
-        parser.read(buffer, len);
-    }
-    file.close();
+    err = parser.read_pcap_file(argv[1]);
+    if (err != 0)
+        return err;
 
     std::cout << "Found " << seq.s << " community packets (more mean better accuracy)" << std::endl;
     // Yeah ... not precise enough. Looking for 0x00 in key should be better.
