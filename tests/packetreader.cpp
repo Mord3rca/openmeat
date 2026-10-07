@@ -1,4 +1,5 @@
 #include <cppunit/extensions/HelperMacros.h>
+#include <string>
 
 #include "openmeat/packet"
 

@@ -1,4 +1,5 @@
 #include <cppunit/extensions/HelperMacros.h>
+#include <string>
 
 #include "openmeat/packet"
 
@@ -68,8 +69,8 @@ void NetworkPacketWriterTest::testWriteUint16_t() {
     Packet s; s.reserve(8);
     PacketWriter w(s);
 
-    w << (uint16_t)0x1122 << (uint16_t)0x3344
-      << (uint16_t)0x5566 << (uint16_t)0x7788;
+    w << static_cast<uint16_t>(0x1122) << static_cast<uint16_t>(0x3344)
+      << static_cast<uint16_t>(0x5566) << static_cast<uint16_t>(0x7788);
     CPPUNIT_ASSERT(e == s);
 }
 
@@ -78,7 +79,7 @@ void NetworkPacketWriterTest::testWriteUint32_t() {
     Packet s; s.reserve(8);
     PacketWriter w(s);
 
-    w << (uint32_t)0x11223344 << (uint32_t)0x55667788;
+    w << static_cast<uint32_t>(0x11223344) << static_cast<uint32_t>(0x55667788);
     CPPUNIT_ASSERT(e == s);
 }
 
@@ -88,10 +89,10 @@ void NetworkPacketWriterTest::testWriteUnsignedChar() {
     Packet s; s.reserve(8);
     PacketWriter w(s);
 
-    w << (unsigned char)0x11 << (unsigned char)0x22
-      << (unsigned char)0x33 << (unsigned char)0x44
-      << (unsigned char)0x55 << (unsigned char)0x66
-      << (unsigned char)0x77 << (unsigned char)0x88;
+    w << static_cast<unsigned char>(0x11) << static_cast<unsigned char>(0x22)
+      << static_cast<unsigned char>(0x33) << static_cast<unsigned char>(0x44)
+      << static_cast<unsigned char>(0x55) << static_cast<unsigned char>(0x66)
+      << static_cast<unsigned char>(0x77) << static_cast<unsigned char>(0x88);
     CPPUNIT_ASSERT(e == s);
 }
 

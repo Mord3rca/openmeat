@@ -6,6 +6,8 @@ extern "C" {
 #include <climits>
 #include <iomanip>
 #include <stdexcept>
+#include <string>
+#include <vector>
 
 #include "openmeat/packet"
 

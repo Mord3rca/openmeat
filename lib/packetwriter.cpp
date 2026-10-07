@@ -1,4 +1,6 @@
 #include <exception>
+#include <string>
+
 #include "openmeat/packet"
 
 using namespace Openmeat::Network;
