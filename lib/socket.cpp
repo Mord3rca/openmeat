@@ -6,6 +6,7 @@ extern "C" {
 }
 
 #include <cstring>
+#include <string>
 
 #include "openmeat/socket"
 
@@ -75,7 +76,7 @@ void Socket::read() {
 }
 
 void Socket::read(const unsigned char *data, const size_t len) {
-    size_t data_remaining;
+    size_t data_remaining, len_diff;
     const unsigned char *first = data;
     const unsigned char *last  = first + len;
 
@@ -86,8 +87,9 @@ void Socket::read(const unsigned char *data, const size_t len) {
             __packet->reserve(__plen);
         }
 
+        len_diff = static_cast<size_t>(last - first);
         data_remaining = __plen - __packet->size();
-        data_remaining = (data_remaining > (size_t)(last - first) ? (size_t)(last - first) : data_remaining);
+        data_remaining = (data_remaining > len_diff ? len_diff : data_remaining);
 
         __packet->writeAt(__packet->size(), first, data_remaining);
         first += data_remaining;
@@ -169,17 +171,17 @@ void Socket::onPacketReceived(Packet*& p) {
 }
 
 namespace Openmeat::Network {
-    Socket& operator >>(Socket& s, Packet*& p) {
-        if (s.__packets.size() == 0)
-            throw std::out_of_range("No packet available");
+Socket& operator >>(Socket& s, Packet*& p) {
+    if (s.__packets.size() == 0)
+        throw std::out_of_range("No packet available");
 
-        p = s.__packets.front();
-        s.__packets.pop();
-        return s;
-    }
+    p = s.__packets.front();
+    s.__packets.pop();
+    return s;
+}
 
-    Socket& operator <<(Socket& s, const Packet& p) {
-        s.write(p);
-        return s;
-    }
+Socket& operator <<(Socket& s, const Packet& p) {
+    s.write(p);
+    return s;
+}
 }  // namespace Openmeat::Network

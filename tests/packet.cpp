@@ -1,4 +1,5 @@
 #include <cppunit/extensions/HelperMacros.h>
+#include <string>
 
 #include "openmeat/packet"
 
@@ -41,7 +42,7 @@ using namespace Openmeat::Network;
 void NetworkPacketTest::testConstKeepAlive() {
     Packet s;
     s.reserve(2);
-    s.writeAt(0, (uint16_t)0x1a1a);
+    s.writeAt(0, static_cast<uint16_t>(0x1a1a));
 
     CPPUNIT_ASSERT(s == keepAlive);
 }
