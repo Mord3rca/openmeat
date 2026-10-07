@@ -3,9 +3,13 @@
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
 
+#include <algorithm>
+#include <cstdint>
+#include <climits>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
+#include <vector>
 
 #include "openmeat/packet"
 #include "openmeat/socket"
@@ -13,13 +17,18 @@
 
 using namespace Openmeat::Network;
 
-const ssize_t KEYLEN = 20;
-static unsigned char key[KEYLEN] = {0};
+const size_t KEYLEN = 20;
 
-static union sequence {
-    uint32_t s = 0;
-    unsigned char b[4];
-} seq;
+bool is_djb2_hash_equal(const int32_t &a, const int32_t &b) {
+    return a == b || b^0xfc001fff == b;
+}
+
+int djb2_hash_comp(const int32_t &a, const int32_t &b) {
+    if (is_djb2_hash_equal(a, b))
+        return 0;
+
+    return a < b ? 1 : -1;
+}
 
 class Parser : public Socket {
  public:
@@ -59,33 +68,96 @@ class Parser : public Socket {
         return 0;
     }
 
- protected:
-    void onPacketReceived(Packet*& p) override {
-        // number is right after the comunity command
-        // which is a uint16_t so we offset the position
-        auto pos = sequence() + 2;
-        const unsigned char *data = p->data();
+    int break_msg_key(void) {
+        int i;
+        int32_t hash = INT_MAX;
+        int32_t warray[KEYLEN] = {0};
 
-        if (p->opcode() != opcode_t::COMMUNITY)
-            goto end;
-        seq.s++;
+        std::sort(key_bytes.begin(), key_bytes.end());
+        auto it = std::unique(key_bytes.begin(), key_bytes.end());
+        key_bytes.erase(it, key_bytes.end());
 
-        for (auto i = 0; i < 4; i++) {
-            key[(pos+i) % KEYLEN] = data[4+i] ^ seq.b[3-i];
+        std::cout << "Breaking with " << key_bytes.size() << " / " << KEYLEN << " known bytes..." << std::endl;
+        do {
+            _msgkey_bruteforce_worker(warray, hash++);
+        } while (hash != INT_MAX);
+
+        if (djb_hashes.empty()) {
+            std::cerr << "No transitional DJB2 hash found" << std::endl;
+            return 1;
         }
 
-    end:
+        std::sort(djb_hashes.begin(), djb_hashes.end(), djb2_hash_comp);
+        auto uhash = std::unique(djb_hashes.begin(), djb_hashes.end(), is_djb2_hash_equal);
+        djb_hashes.erase(uhash, djb_hashes.end());
+
+        std::cout << "Found " << djb_hashes.size() << " possible transitional hash" << std::endl;
+        for (const int32_t &h : djb_hashes) {
+            generate_key(warray, h);
+            std::cout << "int32_t msg_key[] = { ";
+            for (i = 0; i < KEYLEN; i++)
+                std::cout << "0x" << std::setfill('0') << std::setw(8) << std::hex << warray[i] << ", ";
+            std::cout << " };" << std::endl;
+        }
+
+        return 0;
+    }
+
+ protected:
+    void onPacketReceived(Packet*& p) override {
+        const unsigned char *data = p->data();
+
+        if (p->opcode() == opcode_t::COMMUNITY)
+            key_bytes.push_back(data[2]);
+
         delete p;
     }
-};
 
-void print_key() {
-    std::cout << "unsigned char key[" << KEYLEN << "] = { "
-        << std::setfill('0') << std::setw(2) << std::hex;
-    for (auto i = 0; i < KEYLEN; i++)
-        std::cout << "0x" << (ushort)key[i] << ", ";
-    std::cout << "};" << std::endl;
-}
+    int32_t schwifty(int32_t h) {
+        int32_t r = h;
+
+        r ^= r << 13;
+        r ^= r >> 17;
+        r ^= r << 5;
+
+        return r;
+    }
+
+    void generate_key(int32_t warray[KEYLEN], const int32_t hash) {
+        int i;
+
+        warray[0] = schwifty(hash);
+        for (i=1; i < KEYLEN; i++)
+            warray[i] = schwifty(warray[i-1]);
+    }
+
+    void _msgkey_bruteforce_worker(int32_t warray[KEYLEN], const int32_t hash) {
+        int i;
+
+        warray[0] = schwifty(hash);
+        for (i=1; i < KEYLEN; i++) {
+            if (!is_in_kbyte(warray[i-1] & 0xFF))
+                return;
+
+            warray[i] = schwifty(warray[i-1]);
+        }
+
+        if (is_in_kbyte(warray[KEYLEN-1] & 0xFF))
+            djb_hashes.push_back(hash);
+    }
+
+    bool is_in_kbyte(unsigned char b) {
+        for (const unsigned char &i : key_bytes)
+            if ( b == i )
+                return true;
+
+        return false;
+    }
+
+ private:
+    std::vector<int32_t> djb_hashes;
+    std::vector<unsigned char> key_bytes;
+};
 
 int main(int argc, char *argv[]) {
     int err;
@@ -100,14 +172,5 @@ int main(int argc, char *argv[]) {
     if (err != 0)
         return err;
 
-    std::cout << "Found " << seq.s << " community packets (more mean better accuracy)" << std::endl;
-    // Yeah ... not precise enough. Looking for 0x00 in key should be better.
-    if (seq.s > 20) {
-        std::cout << "Printing key: " << std::endl;
-        print_key();
-    } else {
-        std::cout << "Not enough community packets" << std::endl;
-    }
-
-    return 0;
+    return parser.break_msg_key();
 }
