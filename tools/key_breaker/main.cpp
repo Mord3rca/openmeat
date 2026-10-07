@@ -30,9 +30,9 @@ int djb2_hash_comp(const int32_t &a, const int32_t &b) {
     return a < b ? 1 : -1;
 }
 
-class Parser : public Socket {
+class Breaker : public Socket {
  public:
-    explicit Parser(Socket::TYPE t) : Socket(t) {}
+    explicit Breaker(Socket::TYPE t) : Socket(t) {}
 
     int read_pcap_file(const char *filename) {
         pcap_t *pcap;
@@ -161,16 +161,16 @@ class Parser : public Socket {
 
 int main(int argc, char *argv[]) {
     int err;
-    Parser parser(Socket::TYPE::Server);
+    Breaker breaker(Socket::TYPE::Server);
 
     if (argc != 2) {
         std::cerr << "Usage: " << argv[0] << " <file>" << std::endl;
         return 1;
     }
 
-    err = parser.read_pcap_file(argv[1]);
+    err = breaker.read_pcap_file(argv[1]);
     if (err != 0)
         return err;
 
-    return parser.break_msg_key();
+    return breaker.break_msg_key();
 }
