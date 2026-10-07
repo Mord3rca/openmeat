@@ -1,4 +1,4 @@
-# Key Finder
+# Key Breaker
 
 This will parse a Deadmaze Client transaction to find the
 community key (used for 0x3c03 opcodes)

@@ -1,6 +1,6 @@
-FILE(GLOB key_finder_src *.cpp)
+FILE(GLOB key_breaker_src *.cpp)
 
-project(${GLOBAL_NAME}_key_finder)
+project(${GLOBAL_NAME}_key_breaker)
 
 pkg_search_module(PCAP REQUIRED IMPORTED_TARGET libpcap)
 
@@ -14,4 +14,4 @@ add_compile_options(
     $<$<CONFIG:DEBUG>:-g>
 )
 
-target_sources(${PROJECT_NAME} PRIVATE ${key_finder_src})
+target_sources(${PROJECT_NAME} PRIVATE ${key_breaker_src})
