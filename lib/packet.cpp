@@ -29,22 +29,37 @@ template void Packet::writeAt<unsigned char>(Packet::size_type, unsigned char co
 // Constant packets
 const Packet Openmeat::Network::keepAlive({0x1a, 0x1a});
 
+Packet::Packet() {}
 
-Packet::Packet() : std::vector<unsigned char>() {}
-
-Packet::Packet(std::initializer_list<unsigned char> l) : std::vector<unsigned char>(l) {}
+Packet::Packet(std::initializer_list<unsigned char> l) : _d(l) {}
 
 void Packet::reserve(Packet::size_type len) {
     if (len < MINIMAL_PACKET_SIZE)
         throw std::invalid_argument("Invalid packet size");
 
-    std::vector<unsigned char>::reserve(len);
+    _d.reserve(len);
 }
 
 opcode_t Packet::opcode() const {
     uint16_t op;
     readAt(0, op);
     return opcode_t(op);
+}
+
+unsigned char *Packet::data() {
+    return this->_d.data();
+}
+
+const unsigned char *Packet::data() const {
+    return this->_d.data();
+}
+
+Packet::size_type Packet::capacity() const {
+    return this->_d.capacity();
+}
+
+Packet::size_type Packet::size() const {
+    return this->_d.size();
 }
 
 template<class T> void Packet::readAt(Packet::size_type pos, T &out) const {
@@ -74,7 +89,7 @@ template<> void Packet::readAt<std::string>(Packet::size_type pos, std::string &
     uint16_t len;
     readAt<uint16_t>(pos, len);
 
-    if (pos + sizeof(uint16_t) + len > size())
+    if (pos + sizeof(uint16_t) + len > _d.size())
         throw std::out_of_range("Not enough data left to read string");
 
     str = std::string(reinterpret_cast<const char*>(data() + pos + sizeof(uint16_t)), len);
@@ -86,7 +101,7 @@ template<class T> void Packet::writeAt(Packet::size_type pos, T const &e) {
 
     // Fill first bytes if not existing
     while (size() < pos) {
-        push_back(0);
+        _d.push_back(0);
     }
 
     union {
@@ -106,6 +121,10 @@ template<class T> void Packet::writeAt(Packet::size_type pos, T const &e) {
     #endif
 }
 
+const unsigned char Packet::operator[](Packet::size_type o) const {
+    return _d[o];
+}
+
 void Packet::writeAt(Packet::size_type pos, const unsigned char* s, const size_t len) {
     auto blen = pos + len;
 
@@ -113,14 +132,14 @@ void Packet::writeAt(Packet::size_type pos, const unsigned char* s, const size_t
         throw std::out_of_range("Packet: Not enough space for write operation.");
 
     while (size() < pos) {
-        push_back(0);
+        _d.push_back(0);
     }
 
     for (size_t i = 0; i < len; i++) {
         if (pos + i < size())
             data()[pos+i] = s[i];
         else
-            push_back(s[i]);
+            _d.push_back(s[i]);
     }
 }
 
@@ -131,4 +150,17 @@ template<> void Packet::writeAt<std::string>(Packet::size_type pos, std::string 
 
     writeAt<uint16_t>(pos, len);
     writeAt(pos + sizeof(uint16_t), reinterpret_cast<const unsigned char*>(e.c_str()), len);
+}
+
+bool Openmeat::Network::operator==(const Packet &a, const Packet &b) {
+    Packet::size_type i, len = a.size();
+
+    if (len != b.size())
+        return false;
+
+    for (i=0; i < len; i++)
+        if (a[i] != b[i])
+            return false;
+
+    return true;
 }

@@ -13,9 +13,11 @@ namespace Openmeat::Network
 {
     const size_t MINIMAL_PACKET_SIZE=2;
 
-    class Packet : public std::vector<unsigned char>
+    class Packet
     {
     public:
+        typedef std::vector<unsigned char>::size_type size_type;
+
         Packet();
         Packet(std::initializer_list<unsigned char>);
 
@@ -23,13 +25,25 @@ namespace Openmeat::Network
 
         opcode_t opcode() const;
 
+	unsigned char *data();
+	const unsigned char *data() const;
+
+	std::vector<unsigned char>::size_type capacity() const;
+	std::vector<unsigned char>::size_type size() const;
+
         // Methods for reading
         template<class T> void readAt(Packet::size_type, T&) const;
+        const unsigned char operator[](Packet::size_type s) const;
 
         // Methods for writting
         template<class T> void writeAt(Packet::size_type, T const &);
         void writeAt(Packet::size_type, const unsigned char*, const size_t);
+
+    private:
+        std::vector<unsigned char> _d;
     };
+
+    bool operator==(const Packet&, const Packet&);
 
     class PacketWriter
     {
