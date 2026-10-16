@@ -1,0 +1,66 @@
+// Key -*- C++ -*- header
+
+#ifndef OM_KEY_HEADER
+#define OM_KEY_HEADER
+
+#include <array>
+#include <cstring>
+#include <cstdint>
+#include <ostream>
+
+namespace Openmeat::Crypto {
+
+template<int N>
+class IKey : private std::array<int32_t, N> {
+public:
+    using size_type = std::size_t;
+
+    constexpr explicit IKey(int32_t hash) : std::array<int32_t, N>() {
+        size_type i = 0;
+
+        this->at(0) = _nhash(hash);
+        for (i=1; i < N; i++)
+            this->at(i) = _nhash(this->at(i-1));
+    }
+
+    constexpr IKey derive(const char r[]) const {
+        int32_t h = 5381;
+        std::size_t i = 0, rlen = std::strlen(r);
+
+        for (i = 0; i < N; i++)
+            h = ((unsigned)h << 5) + h + this->at(i) + r[i % rlen];
+
+        return IKey<N>(h);
+    }
+
+    const int32_t operator[](size_type pos) const {
+        return std::array<int32_t, N>::operator[](pos);
+    }
+
+    const int32_t *data() const {
+        return std::array<int32_t, N>::data();
+    }
+
+    constexpr size_type size() const {
+        return std::array<int32_t, N>::size();
+    }
+
+private:
+    constexpr int32_t _nhash(const int32_t h) {
+        int32_t r = h;
+
+        r ^= (unsigned)r << 13;
+        r ^= r >> 17;
+        r ^= (unsigned)r << 5;
+
+        return r;
+    }
+};
+typedef IKey<20> Key;
+
+bool operator==(Key const&, Key const&);
+std::ostream& operator<<(std::ostream&, Key const&);
+
+}
+
+#endif  // OM_KEY_HEADER
