@@ -21,7 +21,7 @@ List of ressource's ID / Name
 | 15          | Fertilizer |
 | 16          | Precious metal |
 | 17          | Glass |
-| 18          | ?? |
+| 18          | Electricity |
 | 19          | Electronic component |
 | 20          | Chocolate |
 | 21          | Drinking water |
@@ -29,18 +29,15 @@ List of ressource's ID / Name
 | 23          | Toxic Water |
 | 24          | Cereals |
 | 25          | Butter |
-| 26          | ?? |
+| 26          | Salt |
 | 27          | Milk |
 | 28          | Spices |
 | 29          | Cheese |
 | 30          | Sugar |
-| 31          | ?? |
-| 32          | ?? |
+| 31          | Eggs |
 | 33          | Blade |
-| 34          | ?? |
 | 35          | Seed |
-| 36          | ?? |
-| 37          | ?? |
-| 38          | ?? |
 | 39          | Alcohol |
 | 40          | Medicinal Herb |
+| 42          | Sewing kit |
+| 43          | Blueprint |

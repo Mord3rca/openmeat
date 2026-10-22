@@ -1,6 +1,6 @@
-# Perks
+# Totem
 
-List of Perks ID / Name
+List of Totem ID / Name
 
 | ID (byte) | Name |
 |-----------|------|
