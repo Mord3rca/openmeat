@@ -8,6 +8,12 @@ get_target_property(epan_system_includes epan INTERFACE_SYSTEM_INCLUDE_DIRECTORI
 add_library(${PROJECT_NAME} SHARED)
 target_sources(${PROJECT_NAME} PRIVATE packet-deadmaze.cpp)
 
+target_link_libraries(${PROJECT_NAME} PRIVATE ${GLOBAL_NAME}_static)
+
+if (DEFINED DISSECTOR_IDENT_KEY)
+	target_compile_definitions(${PROJECT_NAME} PUBLIC "DISSECTOR_IDENT_KEY=${DISSECTOR_IDENT_KEY}")
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${epan_includes})
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${epan_system_includes})
 
