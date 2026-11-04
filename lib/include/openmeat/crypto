@@ -64,6 +64,8 @@ std::ostream& operator<<(std::ostream&, Key const&);
 bool scramble(const Key &k, std::int32_t data[], const std::size_t len);
 bool unscramble(const Key &k, std::int32_t data[], const std::size_t len);
 
+void xoring(const Key &k, unsigned char seq, unsigned char data[], std::size_t len);
+
 }
 
 #endif  // OM_KEY_HEADER
