@@ -1,9 +1,10 @@
-#include <stdbool.h>
+#include <arpa/inet.h>
 
 #include <config.h>
 #include <epan/packet.h>
 #include <ws_version.h>
 
+#include "openmeat/crypto"
 #include "openmeat/opcodes"
 
 static int proto_deadmaze = -1;
@@ -19,6 +20,7 @@ static int ett_deadmaze = -1;
     {static_cast<uint32_t>(Openmeat::Network::opcode_t::val), #val}
 
 static const value_string opcode_names[] = {
+    OPCODE_TO_VSTRING(LOGIN),
     OPCODE_TO_VSTRING(DISCONNECT),
     OPCODE_TO_VSTRING(KEEP_ALIVE),
     OPCODE_TO_VSTRING(PING),
@@ -88,23 +90,54 @@ static bool is_to_server(const packet_info *pinfo) {
     return pinfo->destport % 1000 == 801 && s >=11 && s <=14;
 }
 
+#ifdef DISSECTOR_IDENT_KEY
+static inline void _apply_ntohl(std::int32_t arr[], std::size_t len) {
+    for (std::size_t i=0; i < len; i++)
+        arr[i] = ntohl(arr[i]);
+}
+
+constexpr Openmeat::Crypto::Key ikey(DISSECTOR_IDENT_KEY);
+static void _unscramble(unsigned char *edata) {
+        std::size_t len = ntohs(*reinterpret_cast<std::uint16_t*>(edata));
+        std::int32_t *arr = reinterpret_cast<std::int32_t*>(edata+sizeof(std::uint16_t));
+
+        _apply_ntohl(arr, len);
+        Openmeat::Crypto::unscramble(ikey, arr, len);
+        _apply_ntohl(arr, len);
+}
+#endif
+
 static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint *offset, guint32 size) {
+    Openmeat::Network::opcode_t opcode;
+    bool from_client = is_to_server(pinfo);
+
     col_set_str(pinfo->cinfo, COL_PROTOCOL, "DeadMaze");
     col_clear(pinfo->cinfo, COL_INFO);
 
     // Skipping client sequence
-    if (is_to_server(pinfo)) {
+    if (from_client) {
         proto_tree_add_item(tree, hf_deadmaze_sequence, tvb, *offset, 1, ENC_BIG_ENDIAN);
        *offset += 1;
     }
 
+    opcode = static_cast<Openmeat::Network::opcode_t>(tvb_get_ntohs(tvb, *offset));
     proto_tree_add_item(tree, hf_deadmaze_opcode, tvb, *offset, 2, ENC_BIG_ENDIAN);
     *offset += 2;
 
-    if ((size - 2) > 0) {
-        proto_tree_add_item(tree, hf_deadmaze_data, tvb, *offset, size-2, ENC_BIG_ENDIAN);
-        *offset += size - 2;
+    if ((size-2) <= 0)
+        return;
+
+#ifdef DISSECTOR_IDENT_KEY
+    if (from_client && opcode == Openmeat::Network::opcode_t::LOGIN) {
+        unsigned char *edata = reinterpret_cast<unsigned char*>(tvb_memdup(pinfo->pool, tvb, *offset, size-2));
+        _unscramble(edata);
+        tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, edata, size-2, size-2);
+        add_new_data_source(pinfo, next_tvb, "Unscrambled Data");
     }
+#endif
+
+    proto_tree_add_item(tree, hf_deadmaze_data, tvb, *offset, size-2, ENC_BIG_ENDIAN);
+    *offset += size - 2;
 }
 
 static int dissect_deadmaze(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, void *data _U_) {

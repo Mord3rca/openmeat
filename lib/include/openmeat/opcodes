@@ -13,6 +13,7 @@ namespace Openmeat::Network
 {
     enum class opcode_t: uint16_t
     {
+        LOGIN       = 0x1a08,
         DISCONNECT  = 0x1a32,
 
         KEEP_ALIVE  = 0x1a1a,

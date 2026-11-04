@@ -23,3 +23,4 @@ Some options can be set with `-D`:
 | `CMAKE_BUILD_TYPE` | Release | see [this](https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html) for more info |
 | `BUILD_DISSECTOR` | On | Build Wireshark dissector |
 | `BUILD_TESTS` | Off | Build CppUnit tests |
+| `DISSECTOR_IDENT_KEY` | Undefined | IDENT Hash key use for LOGIN decoding (see [key_breaker](tools/key_breaker/README.md) for more info) |
