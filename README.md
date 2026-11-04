@@ -24,3 +24,4 @@ Some options can be set with `-D`:
 | `BUILD_DISSECTOR` | On | Build Wireshark dissector |
 | `BUILD_TESTS` | Off | Build CppUnit tests |
 | `DISSECTOR_IDENT_KEY` | Undefined | IDENT Hash key use for LOGIN decoding (see [key_breaker](tools/key_breaker/README.md) for more info) |
+| `DISSECTOR_MSG_KEY` | Undefined | MSG Hash key use for XOR decoding (see [key_breaker](tools/key_breaker/README.md) for more info) |
