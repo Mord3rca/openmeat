@@ -107,7 +107,12 @@ static void _unscramble(unsigned char *edata) {
 }
 #endif
 
+#ifdef DISSECTOR_MSG_KEY
+constexpr Openmeat::Crypto::Key mkey(DISSECTOR_MSG_KEY);
+#endif
+
 static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree, guint *offset, guint32 size) {
+    unsigned char seq;
     Openmeat::Network::opcode_t opcode;
     bool from_client = is_to_server(pinfo);
 
@@ -116,6 +121,11 @@ static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tre
 
     // Skipping client sequence
     if (from_client) {
+#if WIRESHARK_VERSION_MAJOR >= 4 && WIRESHARK_VERSION_MINOR >=6
+        seq = tvb_get_uint8(tvb, *offset);
+#else
+        seq = tvb_get_guint8(tvb, *offset);
+#endif
         proto_tree_add_item(tree, hf_deadmaze_sequence, tvb, *offset, 1, ENC_BIG_ENDIAN);
        *offset += 1;
     }
@@ -133,6 +143,15 @@ static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tre
         _unscramble(edata);
         tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, edata, size-2, size-2);
         add_new_data_source(pinfo, next_tvb, "Unscrambled Data");
+    }
+#endif
+
+#ifdef DISSECTOR_MSG_KEY
+    if (from_client && opcode == Openmeat::Network::opcode_t::COMMUNITY) {
+        unsigned char *cdata = reinterpret_cast<unsigned char*>(tvb_memdup(pinfo->pool, tvb, *offset, size-2));
+        Openmeat::Crypto::xoring(mkey, seq+1, cdata, size-2);
+        tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, cdata, size-2, size-2);
+        add_new_data_source(pinfo, next_tvb, "XORed Data");
     }
 #endif
 

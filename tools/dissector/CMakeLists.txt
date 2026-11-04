@@ -14,6 +14,10 @@ if (DEFINED DISSECTOR_IDENT_KEY)
 	target_compile_definitions(${PROJECT_NAME} PUBLIC "DISSECTOR_IDENT_KEY=${DISSECTOR_IDENT_KEY}")
 endif()
 
+if (DEFINED DISSECTOR_MSG_KEY)
+	target_compile_definitions(${PROJECT_NAME} PUBLIC "DISSECTOR_MSG_KEY=${DISSECTOR_MSG_KEY}")
+endif()
+
 target_include_directories(${PROJECT_NAME} PRIVATE ${epan_includes})
 target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE ${epan_system_includes})
 
