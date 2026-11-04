@@ -137,23 +137,32 @@ static void dissect_deadmaze_packet(tvbuff_t *tvb, packet_info *pinfo, proto_tre
     if ((size-2) <= 0)
         return;
 
+    if (from_client) {
+        switch (opcode) {
 #ifdef DISSECTOR_IDENT_KEY
-    if (from_client && opcode == Openmeat::Network::opcode_t::LOGIN) {
-        unsigned char *edata = reinterpret_cast<unsigned char*>(tvb_memdup(pinfo->pool, tvb, *offset, size-2));
-        _unscramble(edata);
-        tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, edata, size-2, size-2);
-        add_new_data_source(pinfo, next_tvb, "Unscrambled Data");
-    }
+        case Openmeat::Network::opcode_t::LOGIN:
+        {
+            unsigned char *edata = reinterpret_cast<unsigned char*>(tvb_memdup(pinfo->pool, tvb, *offset, size-2));
+            _unscramble(edata);
+            tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, edata, size-2, size-2);
+            add_new_data_source(pinfo, next_tvb, "Unscrambled Data");
+            break;
+        }
 #endif
-
 #ifdef DISSECTOR_MSG_KEY
-    if (from_client && opcode == Openmeat::Network::opcode_t::COMMUNITY) {
-        unsigned char *cdata = reinterpret_cast<unsigned char*>(tvb_memdup(pinfo->pool, tvb, *offset, size-2));
-        Openmeat::Crypto::xoring(mkey, seq+1, cdata, size-2);
-        tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, cdata, size-2, size-2);
-        add_new_data_source(pinfo, next_tvb, "XORed Data");
-    }
+        case Openmeat::Network::opcode_t::COMMUNITY:
+        {
+            unsigned char *cdata = reinterpret_cast<unsigned char*>(tvb_memdup(pinfo->pool, tvb, *offset, size-2));
+            Openmeat::Crypto::xoring(mkey, seq+1, cdata, size-2);
+            tvbuff_t *next_tvb = tvb_new_child_real_data(tvb, cdata, size-2, size-2);
+            add_new_data_source(pinfo, next_tvb, "XORed Data");
+            break;
+        }
 #endif
+        default:
+            ;;
+        }
+    }
 
     proto_tree_add_item(tree, hf_deadmaze_data, tvb, *offset, size-2, ENC_BIG_ENDIAN);
     *offset += size - 2;
