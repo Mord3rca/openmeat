@@ -84,3 +84,10 @@ bool Openmeat::Crypto::unscramble(const Key &key, std::int32_t data[], const std
 
     return true;
 }
+
+void Openmeat::Crypto::xoring(const Key &k, unsigned char seq, unsigned char data[], std::size_t len) {
+    std::size_t i;
+
+    for (i = 0; i < len; i++)
+        data[i] ^= k[(seq + i) % k.size()];
+}
