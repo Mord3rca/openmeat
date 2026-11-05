@@ -1,3 +1,4 @@
+#include <arpa/inet.h>
 #include <pcap/pcap.h>
 #include <net/ethernet.h>
 #include <netinet/ip.h>
@@ -11,28 +12,60 @@
 #include <iostream>
 #include <vector>
 
+#include "openmeat/crypto"
 #include "openmeat/packet"
 #include "openmeat/socket"
 #include "openmeat/opcodes"
 
+using namespace Openmeat::Crypto;
 using namespace Openmeat::Network;
 
 const size_t KEYLEN = 20;
 
-bool is_djb2_hash_equal(const int32_t &a, const int32_t &b) {
-    return a == b || b^0xfc001fff == b;
+bool is_djb2_hash_equal(const int32_t a, const int32_t b) {
+    return a == b || a == b^0xfc001fff;
 }
 
-int djb2_hash_comp(const int32_t &a, const int32_t &b) {
+int djb2_hash_comp(const int32_t a, const int32_t b) {
     if (is_djb2_hash_equal(a, b))
         return 0;
 
-    return a < b ? 1 : -1;
+    return a - b;
 }
+
+void reduce_djb2_hashes(std::vector<int32_t> &h) {
+    std::sort(h.begin(), h.end(), djb2_hash_comp);
+    auto uhash = std::unique(h.begin(), h.end(), is_djb2_hash_equal);
+    h.erase(uhash, h.end());
+}
+
+class PartialKey : public Key {
+ public:
+    PartialKey() : Key(0) {}
+
+    void reset(const std::int32_t hash) {
+        (*this)[0] = _nhash(hash);
+    }
+
+    bool equal(const unsigned char data[KEYLEN]) {
+        std::size_t i;
+
+        if (data[0] && ((*this)[0] & 0xff) != data[0])
+            return false;
+
+        for (i=1; i < KEYLEN; i++) {
+            (*this)[i] = _nhash((*this)[i-1]);
+            if (data[i] && ((*this)[i] & 0xff) != data[i])
+                return false;
+        }
+
+        return true;
+    }
+};
 
 class Breaker : public Socket {
  public:
-    explicit Breaker(Socket::TYPE t) : Socket(t) {}
+    explicit Breaker(Socket::TYPE t) : Socket(t), community_count(1), kbytes{0x00} {}
 
     int read_pcap_file(const char *filename) {
         pcap_t *pcap;
@@ -49,8 +82,8 @@ class Breaker : public Socket {
             return 1;
         }
 
-        pcap_compile(pcap, &fcode, "tcp", 1, 0xffffff);
-        pcap_setfilter(pcap, &fcode);
+        (void)pcap_compile(pcap, &fcode, "tcp", 1, 0xffffff);
+        (void)pcap_setfilter(pcap, &fcode);
 
         while (pcap_next_ex(pcap, &pktheader, &data) > 0) {
             // Filter force TCP packet so it's safe
@@ -69,94 +102,68 @@ class Breaker : public Socket {
     }
 
     int break_msg_key(void) {
-        int i;
-        int32_t hash = INT_MAX;
-        int32_t warray[KEYLEN] = {0};
+        PartialKey k;
+        std::int64_t hash;
 
-        std::sort(key_bytes.begin(), key_bytes.end());
-        auto it = std::unique(key_bytes.begin(), key_bytes.end());
-        key_bytes.erase(it, key_bytes.end());
-
-        std::cout << "Breaking with " << key_bytes.size() << " / " << KEYLEN << " known bytes..." << std::endl;
-        do {
-            _msgkey_bruteforce_worker(warray, hash++);
-        } while (hash != INT_MAX);
-
-        if (djb_hashes.empty()) {
-            std::cerr << "No transitional DJB2 hash found" << std::endl;
+        if (std::count(kbytes.begin(), kbytes.end(), 0) > 12 /* Gate number ... can be modified. */) {
+            std::cerr << "Not enough leaked bytes to crack MSG Key, aborting..." << std::endl;
             return 1;
         }
 
-        std::sort(djb_hashes.begin(), djb_hashes.end(), djb2_hash_comp);
-        auto uhash = std::unique(djb_hashes.begin(), djb_hashes.end(), is_djb2_hash_equal);
-        djb_hashes.erase(uhash, djb_hashes.end());
-
-        std::cout << "Found " << djb_hashes.size() << " possible transitional hash" << std::endl;
-        for (const int32_t &h : djb_hashes) {
-            generate_key(warray, h);
-            std::cout << "int32_t msg_key[] = { ";
-            for (i = 0; i < KEYLEN; i++)
-                std::cout << "0x" << std::setfill('0') << std::setw(8) << std::hex << warray[i] << ", ";
-            std::cout << " };" << std::endl;
+        for (hash = 0; hash < 0x100000000; hash++) {
+            k.reset(hash);
+            if (k.equal(kbytes.data()))
+                djb_hashes.push_back(hash);
         }
+
+        if (djb_hashes.empty()) {
+            std::cerr << "No transitional DJB2 hash found for msg key, aborting" << std::endl;
+            return 1;
+        }
+
+        reduce_djb2_hashes(djb_hashes);
+
+        std::cout << "MSG Key Found !" << std::endl
+                  << "Use the following definition(s) to import it in your project:" << std::endl << std::endl;
+        for (const auto &i : djb_hashes)
+            std::cout << "Openmeat::Crypto::Key mkey(" << i << ");" << std::endl;
 
         return 0;
     }
 
  protected:
     void onPacketReceived(Packet*& p) override {
-        const unsigned char *data = p->data();
+        unsigned char pos;
+        unsigned char *data = p->data(), *cur;
 
-        if (p->opcode() == opcode_t::COMMUNITY)
-            key_bytes.push_back(data[2]);
+        if (p->opcode() != opcode_t::COMMUNITY)
+            goto end;
 
+        if (p->size() < 8) /* opcode + community_subcmd + sequence */
+            throw std::out_of_range("Community packet don't have enough data");
+
+        pos = sequence() + 3;  // (seq() + 1) + community subcmd, no opcode (since not encrypted)
+
+        *reinterpret_cast<std::uint32_t*>(data + 4) ^= htonl(community_count);
+        for (unsigned char i = 0; i < sizeof(std::uint32_t); i++) {
+            cur = data + 4 + i;
+
+            if (kbytes[(pos+i) % KEYLEN] != 0 && *cur != kbytes[(pos+i) % KEYLEN])
+                throw std::runtime_error("A previous set mkey byte did not match new found value, aborting");
+
+            kbytes[(pos+i) % KEYLEN] = *cur;
+        }
+        community_count++;
+
+    end:
         delete p;
     }
 
-    int32_t schwifty(int32_t h) {
-        int32_t r = h;
-
-        r ^= r << 13;
-        r ^= r >> 17;
-        r ^= r << 5;
-
-        return r;
-    }
-
-    void generate_key(int32_t warray[KEYLEN], const int32_t hash) {
-        int i;
-
-        warray[0] = schwifty(hash);
-        for (i=1; i < KEYLEN; i++)
-            warray[i] = schwifty(warray[i-1]);
-    }
-
-    void _msgkey_bruteforce_worker(int32_t warray[KEYLEN], const int32_t hash) {
-        int i;
-
-        warray[0] = schwifty(hash);
-        for (i=1; i < KEYLEN; i++) {
-            if (!is_in_kbyte(warray[i-1] & 0xFF))
-                return;
-
-            warray[i] = schwifty(warray[i-1]);
-        }
-
-        if (is_in_kbyte(warray[KEYLEN-1] & 0xFF))
-            djb_hashes.push_back(hash);
-    }
-
-    bool is_in_kbyte(unsigned char b) {
-        for (const unsigned char &i : key_bytes)
-            if ( b == i )
-                return true;
-
-        return false;
-    }
-
  private:
+    std::uint32_t community_count;
+    std::array<unsigned char, KEYLEN> kbytes;
+
     std::vector<int32_t> djb_hashes;
-    std::vector<unsigned char> key_bytes;
 };
 
 int main(int argc, char *argv[]) {
