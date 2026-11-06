@@ -11,8 +11,12 @@ template PacketReader& PacketReader::operator>><uint32_t>(uint32_t&);
 template PacketReader& PacketReader::operator>><unsigned char>(unsigned char&);
 
 PacketReader::PacketReader() : __p(nullptr), __s(0) {}
-PacketReader::PacketReader(Packet *p) : __p(p), __s(0) {}
-PacketReader::PacketReader(Packet &p) : __p(&p), __s(0) {}
+PacketReader::PacketReader(const Packet *p) : __p(p), __s(0) {}
+PacketReader::PacketReader(const Packet &p) : __p(&p), __s(0) {}
+
+Packet::size_type& PacketReader::seek() {
+    return __s;
+}
 
 Packet::size_type PacketReader::seek() const noexcept {
     return __s;

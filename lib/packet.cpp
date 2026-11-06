@@ -152,6 +152,12 @@ template<> void Packet::writeAt<std::string>(Packet::size_type pos, std::string 
     writeAt(pos + sizeof(uint16_t), reinterpret_cast<const unsigned char*>(e.c_str()), len);
 }
 
+void Packet::operator=(const Packet &e) {
+    _d.resize(e.size());
+
+    memcpy(_d.data(), e.data(), e.size());
+}
+
 bool Openmeat::Network::operator==(const Packet &a, const Packet &b) {
     Packet::size_type i, len = a.size();
 

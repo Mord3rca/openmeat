@@ -24,13 +24,7 @@ public:
     }
 
     constexpr IKey derive(const char r[]) const {
-        int32_t h = 5381;
-        std::size_t i = 0, rlen = std::strlen(r);
-
-        for (i = 0; i < N; i++)
-            h = ((unsigned)h << 5) + h + this->at(i) + r[i % rlen];
-
-        return IKey<N>(h);
+        return IKey<N>(_djb2_hash(r));
     }
 
     int32_t &operator[](size_type pos) {
@@ -50,7 +44,7 @@ public:
     }
 
 protected:
-    constexpr int32_t _nhash(const int32_t h) {
+    constexpr int32_t _nhash(const int32_t h) const {
         int32_t r = h;
 
         r ^= (unsigned)r << 13;
@@ -58,6 +52,16 @@ protected:
         r ^= (unsigned)r << 5;
 
         return r;
+    }
+
+    constexpr int32_t _djb2_hash(const char r[]) const {
+        int32_t h = 5381;
+        std::size_t i = 0, rlen = std::strlen(r);
+
+        for (i = 0; i < N; i++)
+            h = ((unsigned)h << 5) + h + this->at(i) + r[i % rlen];
+
+        return h;
     }
 };
 typedef IKey<20> Key;
