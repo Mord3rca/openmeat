@@ -39,12 +39,24 @@ void reduce_djb2_hashes(std::vector<int32_t> &h) {
     h.erase(uhash, h.end());
 }
 
+void apply_ntohl(std::int32_t arr[], std::size_t len) {
+    for (std::size_t i = 0; i < len; i ++)
+        arr[i] = ntohl(arr[i]);
+}
+
 class PartialKey : public Key {
  public:
     PartialKey() : Key(0) {}
 
     void reset(const std::int32_t hash) {
         (*this)[0] = _nhash(hash);
+    }
+
+    void init_unscramble(const std::int32_t hash) {
+        (*this)[0] = _nhash(hash);
+        // Init only accessed hashes
+        for (int i = 1; i < 4; i++)
+            (*this)[i] = _nhash((*this)[i-1]);
     }
 
     bool equal(const unsigned char data[KEYLEN]) {
@@ -65,7 +77,12 @@ class PartialKey : public Key {
 
 class Breaker : public Socket {
  public:
-    explicit Breaker(Socket::TYPE t) : Socket(t), community_count(1), kbytes{0x00} {}
+    explicit Breaker(Socket::TYPE t) : Socket(t), community_count(1), kbytes{0x00}, ident(nullptr) {}
+
+    ~Breaker() {
+        if (ident)
+            delete ident;
+    }
 
     int read_pcap_file(const char *filename) {
         pcap_t *pcap;
@@ -113,20 +130,73 @@ class Breaker : public Socket {
         for (hash = 0; hash < 0x100000000; hash++) {
             k.reset(hash);
             if (k.equal(kbytes.data()))
-                djb_hashes.push_back(hash);
+                msg_djb_hashes.push_back(hash);
         }
 
-        if (djb_hashes.empty()) {
+        if (msg_djb_hashes.empty()) {
             std::cerr << "No transitional DJB2 hash found for msg key, aborting" << std::endl;
             return 1;
         }
 
-        reduce_djb2_hashes(djb_hashes);
+        reduce_djb2_hashes(msg_djb_hashes);
 
         std::cout << "MSG Key Found !" << std::endl
                   << "Use the following definition(s) to import it in your project:" << std::endl << std::endl;
-        for (const auto &i : djb_hashes)
+        for (const auto &i : msg_djb_hashes)
             std::cout << "Openmeat::Crypto::Key mkey(" << i << ");" << std::endl;
+
+        return 0;
+    }
+
+    bool check_ident_validity(const Packet &p) {
+        PacketReader r(p);
+        std::uint16_t size;
+
+        try {
+            r >> size >> size;  // Read opcode & len
+            r >> size; r.seek() += size;
+            r >> size; r.seek() += size;
+            r >> size; r.seek() += size;
+            r >> size; r.seek() += size;
+            r.seek() += 7; /* int + short + byte */
+            r >> size; r.seek() += size;
+        } catch (std::out_of_range &e) {
+            return false;
+        }
+
+        return (p.size() - r.seek()) < 4;
+    }
+
+    int break_ident_key(void) {
+        Packet wpack;
+        PartialKey k;
+        std::int64_t hash;
+
+        if (!ident) {
+            std::cerr << "LOGIN packet not found, skipping ident key breaker..." << std::endl;
+            return 0;
+        }
+
+        for (hash = 0; hash < 0x100000000; hash++) {
+            wpack = *ident;
+            k.init_unscramble(hash);
+            unscramble(k, reinterpret_cast<std::int32_t*>(wpack.data() + 4), ident_len);
+            apply_ntohl(reinterpret_cast<std::int32_t*>(wpack.data() + 4), ident_len);
+            if (check_ident_validity(wpack))
+                ident_djb_hashes.push_back(hash);
+        }
+
+        if (ident_djb_hashes.empty()) {
+            std::cerr << "No transitional DJB2 hash found for ident key, aborting" << std::endl;
+            return 1;
+        }
+
+        reduce_djb2_hashes(ident_djb_hashes);
+
+        std::cout << "Ident Key Found !" << std::endl
+                  << "Use the following definition(s) to import it in your project:" << std::endl << std::endl;
+        for (const auto &i : ident_djb_hashes)
+            std::cout << "Openmeat::Crypto::Key ikey(" << i << ");" << std::endl;
 
         return 0;
     }
@@ -135,6 +205,17 @@ class Breaker : public Socket {
     void onPacketReceived(Packet*& p) override {
         unsigned char pos;
         unsigned char *data = p->data(), *cur;
+
+        if (p->opcode() == opcode_t::LOGIN && !ident) {
+            p->readAt<uint16_t>(2, ident_len);
+            if (ident_len << 2 != p->size() - 4 /* -opcode -arrayLen */) {
+                std::cerr << "WARN: Malformed LOGIN packet with sequence " << sequence() << std::endl;
+                goto end;
+            }
+            apply_ntohl(reinterpret_cast<std::int32_t*>(p->data() + 4), ident_len);
+            ident = p;
+            return;
+        }
 
         if (p->opcode() != opcode_t::COMMUNITY)
             goto end;
@@ -162,8 +243,11 @@ class Breaker : public Socket {
  private:
     std::uint32_t community_count;
     std::array<unsigned char, KEYLEN> kbytes;
+    std::vector<int32_t> msg_djb_hashes;
 
-    std::vector<int32_t> djb_hashes;
+    Packet *ident;
+    std::uint16_t ident_len;
+    std::vector<int32_t> ident_djb_hashes;
 };
 
 int main(int argc, char *argv[]) {
@@ -179,5 +263,5 @@ int main(int argc, char *argv[]) {
     if (err != 0)
         return err;
 
-    return breaker.break_msg_key();
+    return breaker.break_msg_key() + breaker.break_ident_key();
 }
