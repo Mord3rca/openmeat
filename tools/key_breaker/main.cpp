@@ -206,37 +206,41 @@ class Breaker : public Socket {
         unsigned char pos;
         unsigned char *data = p->data(), *cur;
 
-        if (p->opcode() == opcode_t::LOGIN && !ident) {
+        switch (p->opcode()) {
+        case opcode_t::LOGIN:
+            if (ident)
+                break;
+
             p->readAt<uint16_t>(2, ident_len);
             if (ident_len << 2 != p->size() - 4 /* -opcode -arrayLen */) {
                 std::cerr << "WARN: Malformed LOGIN packet with sequence " << sequence() << std::endl;
-                goto end;
+                break;
             }
             apply_ntohl(reinterpret_cast<std::int32_t*>(p->data() + 4), ident_len);
             ident = p;
             return;
+
+        case opcode_t::COMMUNITY:
+            if (p->size() < 8) /* opcode + community_subcmd + sequence */
+                throw std::out_of_range("Community packet don't have enough data");
+
+            pos = sequence() + 3;  // (seq() + 1) + community subcmd, no opcode (since not encrypted)
+
+            *reinterpret_cast<std::uint32_t*>(data + 4) ^= htonl(community_count);
+            for (unsigned char i = 0; i < sizeof(std::uint32_t); i++) {
+                cur = data + 4 + i;
+
+                if (kbytes[(pos+i) % KEYLEN] != 0 && *cur != kbytes[(pos+i) % KEYLEN])
+                    throw std::runtime_error("A previous set mkey byte did not match new found value, aborting");
+
+                kbytes[(pos+i) % KEYLEN] = *cur;
+            }
+            community_count++;
+
+        default:
+            ;;
         }
 
-        if (p->opcode() != opcode_t::COMMUNITY)
-            goto end;
-
-        if (p->size() < 8) /* opcode + community_subcmd + sequence */
-            throw std::out_of_range("Community packet don't have enough data");
-
-        pos = sequence() + 3;  // (seq() + 1) + community subcmd, no opcode (since not encrypted)
-
-        *reinterpret_cast<std::uint32_t*>(data + 4) ^= htonl(community_count);
-        for (unsigned char i = 0; i < sizeof(std::uint32_t); i++) {
-            cur = data + 4 + i;
-
-            if (kbytes[(pos+i) % KEYLEN] != 0 && *cur != kbytes[(pos+i) % KEYLEN])
-                throw std::runtime_error("A previous set mkey byte did not match new found value, aborting");
-
-            kbytes[(pos+i) % KEYLEN] = *cur;
-        }
-        community_count++;
-
-    end:
         delete p;
     }
 
