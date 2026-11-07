@@ -2,11 +2,13 @@ FILE(GLOB key_breaker_src *.cpp)
 
 project(${GLOBAL_NAME}_key_breaker)
 
+find_package(OpenMP REQUIRED)
+
 pkg_search_module(PCAP REQUIRED IMPORTED_TARGET libpcap)
 
 add_executable(${PROJECT_NAME})
 
-target_link_libraries(${PROJECT_NAME} ${GLOBAL_NAME} PkgConfig::PCAP)
+target_link_libraries(${PROJECT_NAME} ${GLOBAL_NAME} PkgConfig::PCAP OpenMP::OpenMP_CXX)
 
 add_compile_options(
     -Wall

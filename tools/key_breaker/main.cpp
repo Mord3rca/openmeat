@@ -3,6 +3,7 @@
 #include <net/ethernet.h>
 #include <netinet/ip.h>
 #include <netinet/tcp.h>
+#include <omp.h>
 
 #include <algorithm>
 #include <cstdint>
@@ -128,18 +129,23 @@ class Breaker : public Socket {
     }
 
     int break_msg_key(void) {
-        PartialKey k;
-        std::int64_t hash;
-
         if (std::count(kbytes.begin(), kbytes.end(), 0) > 12 /* Gate number ... can be modified. */) {
             std::cerr << "Not enough leaked bytes to crack MSG Key, aborting..." << std::endl;
             return 1;
         }
 
-        for (hash = 0; hash < 0x100000000; hash++) {
-            k.reset(hash);
-            if (k.equal(kbytes.data()))
-                msg_djb_hashes.push_back(hash);
+        #pragma omp parallel
+        {
+            PartialKey k;
+
+            #pragma omp for
+            for (std::int64_t hash = 0; hash < 0x100000000; hash++) {
+                k.reset(hash);
+                if (k.equal(kbytes.data())) {
+                    #pragma omp critical
+                    { msg_djb_hashes.push_back(hash); }
+                }
+            }
         }
 
         reduce_djb2_hashes(msg_djb_hashes);
@@ -148,14 +154,19 @@ class Breaker : public Socket {
     }
 
     int break_ident_key(void) {
-        Packet wpack;
-        PartialKey k;
-        std::int64_t hash;
+        #pragma omp parallel
+        {
+            Packet wpack;
+            PartialKey k;
 
-        for (hash = 0; hash < 0x100000000; hash++) {
-            k.init_unscramble(hash);
-            if (_check_ident_packet(wpack, k))
-                ident_djb_hashes.push_back(hash);
+            #pragma omp for
+            for (std::int64_t hash = 0; hash < 0x100000000; hash++) {
+                k.init_unscramble(hash);
+                if (_check_ident_packet(wpack, k)) {
+                    #pragma omp critical
+                    {ident_djb_hashes.push_back(hash);}
+                }
+            }
         }
 
         reduce_djb2_hashes(ident_djb_hashes);
@@ -172,14 +183,19 @@ class Breaker : public Socket {
     }
 
     bool try_reduce_complexity() {
-        PartialKey k;
-        std::int32_t djb;
-        std::int64_t hash;
+        #pragma omp parallel
+        {
+            PartialKey k;
+            std::int32_t djb;
 
-        for (hash=0; hash < 0x100000000; hash++) {
-            djb = k.djb2_hash(hash, "msg");
-            if (is_in_vector(msg_djb_hashes, djb))
-                root_djb_hashes.push_back(hash);
+            #pragma omp for
+            for (std::int64_t hash=0; hash < 0x100000000; hash++) {
+                djb = k.djb2_hash(hash, "msg");
+                if (is_in_vector(msg_djb_hashes, djb)) {
+                    #pragma omp critical
+                    {root_djb_hashes.push_back(hash);}
+                }
+            }
         }
 
         reduce_djb2_hashes(root_djb_hashes);
