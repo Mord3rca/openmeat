@@ -123,6 +123,7 @@ class Breaker : public Socket {
             read(data + dataOffset, pktheader->len - dataOffset);
         }
 
+        pcap_freecode(&fcode);
         pcap_close(pcap);
 
         return 0;
