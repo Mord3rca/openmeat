@@ -47,8 +47,8 @@ const unsigned char scrambled[] = {
     0x1e, 0x47, 0x01, 0x80, 0xd8, 0x61, 0x5e, 0xf3
 };
 
-bool check_buffer_equality(const unsigned char *a, const unsigned char *b) {
-    for (std::size_t i=0; i < 24; i++)
+bool check_buffer_equality(const unsigned char *a, const unsigned char *b, std::size_t len) {
+    for (std::size_t i=0; i < len; i++)
         if (*(a+i) != *(b+i))
             return false;
 
@@ -67,14 +67,14 @@ class CryptoScrambleTests : public CppUnit::TestFixture {
         unsigned char buffer[24];
         memcpy(buffer, unscrambled, 24);
         scramble(tkey, reinterpret_cast<std::int32_t*>(buffer), 24 / sizeof(std::int32_t));
-        CPPUNIT_ASSERT(check_buffer_equality(scrambled, buffer));
+        CPPUNIT_ASSERT(check_buffer_equality(scrambled, buffer, 24));
     }
 
     void testUnscramble() {
         unsigned char buffer[24];
         memcpy(buffer, scrambled, 24);
         unscramble(tkey, reinterpret_cast<std::int32_t*>(buffer), 24 / sizeof(std::int32_t));
-        CPPUNIT_ASSERT(check_buffer_equality(unscrambled, buffer));
+        CPPUNIT_ASSERT(check_buffer_equality(unscrambled, buffer, 24));
     }
 
     void testNoop() {
@@ -83,7 +83,35 @@ class CryptoScrambleTests : public CppUnit::TestFixture {
         scramble(tkey, reinterpret_cast<std::int32_t*>(buffer), 24 / sizeof(std::int32_t));
         unscramble(tkey, reinterpret_cast<std::int32_t*>(buffer), 24 / sizeof(std::int32_t));
 
-        CPPUNIT_ASSERT(check_buffer_equality(unscrambled, buffer));
+        CPPUNIT_ASSERT(check_buffer_equality(unscrambled, buffer, 24));
     }
 };
 CPPUNIT_TEST_SUITE_REGISTRATION(CryptoScrambleTests);
+
+
+constexpr Key xkey(0xbadc0ffe);
+
+const unsigned char xordata[] = {
+    0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+    0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff
+};
+
+const unsigned char xored[] = {
+    0x8f, 0xaa, 0x62, 0x1c, 0xfb, 0xbc, 0xc3, 0xd7,
+    0xa0, 0xc0, 0x21, 0xd7, 0x1c, 0x56, 0x6b, 0xbe
+};
+
+class CryptoXORTests : public CppUnit::TestFixture {
+    CPPUNIT_TEST_SUITE(CryptoXORTests);
+    CPPUNIT_TEST(testXOR);
+    CPPUNIT_TEST_SUITE_END();
+
+ public:
+    void testXOR() {
+        unsigned char buffer[16];
+        memcpy(buffer, xordata, 16);
+        xoring(xkey, 0, buffer, 16);
+        CPPUNIT_ASSERT(check_buffer_equality(xored, buffer, 16));
+    }
+};
+CPPUNIT_TEST_SUITE_REGISTRATION(CryptoXORTests);
