@@ -240,14 +240,16 @@ class Breaker : public Socket {
             return err;
         }
 
-        std::cout << "Trying to reduce crack complexity based on MSG Key crack result ..." << std::endl;
-        if (try_reduce_complexity()) {
-            std::cout << "Breaking IDENTIFICATION Key with low complexity algorithm ..." << std::endl;
-            if (break_ident_key_lcomplexity()) {
-                print_result();
-                return 0;
+        if (err == 0) {
+            std::cout << "Trying to reduce crack complexity based on MSG Key crack result ..." << std::endl;
+            if (try_reduce_complexity()) {
+                std::cout << "Breaking IDENTIFICATION Key with low complexity algorithm ..." << std::endl;
+                if (break_ident_key_lcomplexity()) {
+                    print_result();
+                    return 0;
+                }
+                std::cout << "Failed to find a root key." << std::endl;
             }
-            std::cout << "Failed to find a root key." << std::endl;
         }
 
         std::cout << "Breaking IDENTIFICATION Key ..." << std::endl;
