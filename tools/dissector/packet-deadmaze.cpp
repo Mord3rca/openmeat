@@ -177,15 +177,15 @@ static int dissect_deadmaze(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree,
         const guint offset_start = offset;
 
         if (!read_varint(&size, tvb, &offset)) {
-            pinfo->desegment_offset = offset;
+            pinfo->desegment_offset = offset_start;
             pinfo->desegment_len = DESEGMENT_ONE_MORE_SEGMENT;
-            return offset + available;
+            return tvb_captured_length(tvb);
         }
 
         if (size > available) {
-            pinfo->desegment_offset = offset;
-            pinfo->desegment_len = size - available;
-            return offset + available;
+            pinfo->desegment_offset = offset_start;
+            pinfo->desegment_len = size;
+            return tvb_captured_length(tvb);
         }
 
         proto_item *item = proto_tree_add_item(tree, proto_deadmaze, tvb, 0, -1, ENC_NA);
